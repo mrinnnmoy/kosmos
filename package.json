@@ -1,0 +1,20 @@
+{
+  "name": "kosmos",
+  "private": true,
+  "version": "0.0.1",
+  "workspaces": [
+    "app/web",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=app/web",
+    "build": "npm run build --workspace=app/web",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.9.6"
+  }
+}

@@ -12,7 +12,7 @@ export function Input({
         "text-sm text-foreground placeholder:text-muted-foreground",
         "outline-none transition-colors",
         "focus:border-primary focus:ring-2 focus:ring-primary/20",
-        className,
+        className
       )}
       {...props}
     />

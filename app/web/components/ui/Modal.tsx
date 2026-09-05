@@ -24,7 +24,7 @@ export function Modal({
             "fixed left-1/2 top-1/2 w-[calc(100%-2rem)] max-w-lg",
             "-translate-x-1/2 -translate-y-1/2",
             "rounded-xl border border-border bg-surface p-6",
-            "shadow-2xl outline-none",
+            "shadow-2xl outline-none"
           )}
         >
           <Dialog.Title className="font-heading text-xl font-semibold text-foreground">
