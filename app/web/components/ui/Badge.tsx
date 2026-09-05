@@ -18,7 +18,7 @@ export function Badge({ className, tone = "default", ...props }: BadgeProps) {
           "bg-danger/15 text-danger": tone === "danger",
           "bg-warning/15 text-warning": tone === "warning",
         },
-        className,
+        className
       )}
       {...props}
     />

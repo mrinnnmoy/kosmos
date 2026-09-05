@@ -11,7 +11,7 @@ export function Select({
         "h-10 w-full rounded-lg border border-border bg-surface px-3",
         "text-sm text-foreground outline-none",
         "focus:border-primary focus:ring-2 focus:ring-primary/20",
-        className,
+        className
       )}
       {...props}
     />

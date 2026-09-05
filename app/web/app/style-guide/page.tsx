@@ -10,7 +10,6 @@ import { Badge } from "@/components/ui/Badge";
 import { Modal } from "@/components/ui/Modal";
 
 export default function StyleGuidePage() {
-  
   const [modalOpen, setModalOpen] = useState(false);
 
   return (

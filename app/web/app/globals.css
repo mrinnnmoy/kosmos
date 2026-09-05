@@ -28,7 +28,11 @@
   --font-heading: var(--font-kosmos-heading);
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
-  --background-image-brand-gradient: linear-gradient(135deg, #1463ff 0%, #7c3aed 100%);
+  --background-image-brand-gradient: linear-gradient(
+    135deg,
+    #1463ff 0%,
+    #7c3aed 100%
+  );
 }
 
 * {
