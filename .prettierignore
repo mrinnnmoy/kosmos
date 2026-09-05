@@ -5,3 +5,4 @@ contracts/out
 contracts/cache
 contracts/lib
 packages/shared/dist
+app/web/lib/db/migrations/meta
