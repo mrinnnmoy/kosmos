@@ -292,6 +292,9 @@ Kosmos/
 
 ```bash
 # ── Chain / Contracts ─────────────────────
+SEPOLIA_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
+PRIVATE_KEY=
+ETHERSCAN_API_KEY=
 
 # ── Privy ─────────────────────────────────
 
@@ -302,6 +305,8 @@ Kosmos/
 # ── ENS ───────────────────────────────────
 
 # ── Database (Supabase) ───────────────────
+DATABASE_URL="postgresql://user:password@host:6543/postgres"
+DIRECT_DATABASE_URL="postgresql://user:password@host:5432/postgres"
 
 # ── IPFS (Pinata / web3.storage) ──────────
 
