@@ -22,6 +22,11 @@ export const EventEscrowAbi = [
         type: "address",
         internalType: "address",
       },
+      {
+        name: "_ticketNFT",
+        type: "address",
+        internalType: "address",
+      },
     ],
     stateMutability: "nonpayable",
   },
@@ -125,6 +130,24 @@ export const EventEscrowAbi = [
   },
   {
     type: "function",
+    name: "mintTickets",
+    inputs: [
+      {
+        name: "checkedInAttendees",
+        type: "address[]",
+        internalType: "address[]",
+      },
+      {
+        name: "metadataCID",
+        type: "string",
+        internalType: "string",
+      },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
     name: "owner",
     inputs: [],
     outputs: [
@@ -197,6 +220,19 @@ export const EventEscrowAbi = [
         name: "",
         type: "uint8",
         internalType: "enum EventEscrow.DepositStatus",
+      },
+    ],
+    stateMutability: "view",
+  },
+  {
+    type: "function",
+    name: "ticketNFT",
+    inputs: [],
+    outputs: [
+      {
+        name: "",
+        type: "address",
+        internalType: "address",
       },
     ],
     stateMutability: "view",

@@ -1,37 +1,32 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.36;
 
 import {EventEscrow} from "./EventEscrow.sol";
 
 contract EventEscrowFactory {
-  event EscrowCreated(
-    address indexed escrow,
-    address indexed host,
-    uint256 startTime,
-    uint256 endTime
-  );
+    address public immutable ticketNFT;
 
-  address[] public allEscrows;
+    address[] public allEscrows;
+    mapping(address => bool) public isEscrow;
 
-  function createEscrow(
-    uint256 startTime,
-    uint256 endTime
-  ) external returns (address escrow) {
-    EventEscrow newEscrow = new EventEscrow(
-      msg.sender,
-      startTime,
-      endTime,
-      address(this)
-    );
+    event EscrowCreated(address indexed escrow, address indexed host, uint256 startTime, uint256 endTime);
 
-    escrow = address(newEscrow);
+    constructor(address _ticketNFT) {
+        ticketNFT = _ticketNFT;
+    }
 
-    allEscrows.push(escrow);
+    function createEscrow(uint256 startTime, uint256 endTime) external returns (address escrow) {
+        EventEscrow newEscrow = new EventEscrow(msg.sender, startTime, endTime, address(this), ticketNFT);
 
-    emit EscrowCreated(escrow, msg.sender, startTime, endTime);
-  }
+        escrow = address(newEscrow);
 
-  function escrowCount() external view returns (uint256) {
-    return allEscrows.length;
-  }
+        allEscrows.push(escrow);
+        isEscrow[escrow] = true;
+
+        emit EscrowCreated(escrow, msg.sender, startTime, endTime);
+    }
+
+    function escrowCount() external view returns (uint256) {
+        return allEscrows.length;
+    }
 }
