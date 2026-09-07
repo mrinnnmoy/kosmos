@@ -1,9 +1,16 @@
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
-import "./globals.css";
 import { Toaster } from "sonner";
 
-const inter = Inter({ variable: "--font-kosmos-body", subsets: ["latin"] });
+import { Footer } from "@/components/layout/Footer";
+import { Navbar } from "@/components/layout/Navbar";
+
+import "./globals.css";
+
+const inter = Inter({
+  variable: "--font-kosmos-body",
+  subsets: ["latin"],
+});
 
 const spaceGrotesk = Space_Grotesk({
   variable: "--font-kosmos-heading",
@@ -11,8 +18,13 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Kosmos",
-  description: "Decentralized event ticketing",
+  title: "Kosmos — Tickets backed by escrow, not promises.",
+  description:
+    "Event ticketing with escrowed payments, Selfie Check identity verification, and NFT proof of attendance.",
+  openGraph: {
+    title: "Kosmos",
+    description: "Tickets backed by escrow, not promises.",
+  },
 };
 
 export default function RootLayout({
@@ -20,8 +32,10 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
-      <body className="bg-background text-foreground font-sans antialiased">
-        {children}
+      <body className="bg-background font-sans text-foreground antialiased">
+        <Navbar />
+        <main>{children}</main>
+        <Footer />
         <Toaster theme="dark" />
       </body>
     </html>
