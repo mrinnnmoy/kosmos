@@ -2,5 +2,13 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+remappings = [
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "@ensdomains/contracts-v2/=lib/contracts-v2/contracts/src/",
+]
 
-remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
+[rpc_endpoints]
+sepolia = "${SEPOLIA_RPC_URL}"
+
+[etherscan]
+sepolia = { key = "${ETHERSCAN_API_KEY}" }
