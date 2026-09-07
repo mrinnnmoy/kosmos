@@ -297,6 +297,8 @@ PRIVATE_KEY=
 ETHERSCAN_API_KEY=
 
 # ── Privy ─────────────────────────────────
+NEXT_PUBLIC_PRIVY_APP_ID=
+PRIVY_APP_SECRET=
 
 # ── World ID ──────────────────────────────
 

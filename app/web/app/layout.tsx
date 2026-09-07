@@ -4,6 +4,7 @@ import { Toaster } from "sonner";
 
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
+import { Providers } from "./providers";
 
 import "./globals.css";
 
@@ -33,10 +34,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable}`}>
       <body className="bg-background font-sans text-foreground antialiased">
-        <Navbar />
-        <main>{children}</main>
-        <Footer />
-        <Toaster theme="dark" />
+        <Providers>
+          <Navbar />
+          <main>{children}</main>
+          <Footer />
+          <Toaster theme="dark" />
+        </Providers>
       </body>
     </html>
   );
