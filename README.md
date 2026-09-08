@@ -297,12 +297,16 @@ PRIVATE_KEY=
 ETHERSCAN_API_KEY=
 
 # ── Privy ─────────────────────────────────
+NEXT_PUBLIC_PRIVY_APP_ID=
+PRIVY_APP_SECRET=
 
 # ── World ID ──────────────────────────────
 
 # ── Uniswap ───────────────────────────────
 
 # ── ENS ───────────────────────────────────
+SEPOLIA_RPC_URL=
+ADMIN_PRIVATE_KEY=
 
 # ── Database (Supabase) ───────────────────
 DATABASE_URL="postgresql://user:password@host:6543/postgres"

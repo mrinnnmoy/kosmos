@@ -1,17 +1,111 @@
-type DashboardPageProps = {
-  params: Promise<{
-    "ens-subname": string;
-  }>;
-};
+import { eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
 
-export default async function DashboardPage({ params }: DashboardPageProps) {
+import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
+import { db } from "@/lib/db";
+import { events, joinRequests, users } from "@/lib/db/schema";
+
+export default async function UserDashboardPage({
+  params,
+}: {
+  params: Promise<{ "ens-subname": string }>;
+}) {
   const { "ens-subname": ensSubname } = await params;
 
+  const [profile] = await db
+    .select()
+    .from(users)
+    .where(eq(users.ensSubname, ensSubname))
+    .limit(1);
+
+  if (!profile) {
+    notFound();
+  }
+
+  const hostedEvents = await db
+    .select()
+    .from(events)
+    .where(eq(events.hostId, profile.id));
+
+  const joinedEvents = await db
+    .select({
+      event: events,
+      request: joinRequests,
+    })
+    .from(joinRequests)
+    .innerJoin(events, eq(joinRequests.eventId, events.id))
+    .where(eq(joinRequests.userId, profile.id));
+
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-6">
-      <p className="text-muted-foreground">
-        Dashboard for {ensSubname} — coming in Commit 10
-      </p>
+    <main className="mx-auto max-w-4xl px-4 py-16">
+      <header>
+        <h1 className="text-2xl font-bold">
+          {profile.firstName ?? ensSubname}
+        </h1>
+
+        <p className="text-muted-foreground">
+          {ensSubname}.kosmos.eth
+        </p>
+
+        {profile.bio && (
+          <p className="mt-2 text-sm">
+            {profile.bio}
+          </p>
+        )}
+      </header>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold">
+          Hosted events
+        </h2>
+
+        {hostedEvents.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            No hosted events yet — event creation lands in Commit 13.
+          </p>
+        ) : (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {hostedEvents.map((event) => (
+              <Card key={event.id}>
+                <h3 className="font-medium">
+                  {event.name}
+                </h3>
+
+                <Badge className="mt-2">
+                  {event.status}
+                </Badge>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold">
+          Joined events
+        </h2>
+
+        {joinedEvents.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            No joined events yet — the join flow lands in Commit 17.
+          </p>
+        ) : (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {joinedEvents.map(({ event, request }) => (
+              <Card key={event.id}>
+                <h3 className="font-medium">
+                  {event.name}
+                </h3>
+
+                <Badge className="mt-2">
+                  {request.status}
+                </Badge>
+              </Card>
+            ))}
+          </div>
+        )}
+      </section>
     </main>
   );
 }
