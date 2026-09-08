@@ -305,6 +305,8 @@ PRIVY_APP_SECRET=
 # ── Uniswap ───────────────────────────────
 
 # ── ENS ───────────────────────────────────
+SEPOLIA_RPC_URL=
+ADMIN_PRIVATE_KEY=
 
 # ── Database (Supabase) ───────────────────
 DATABASE_URL="postgresql://user:password@host:6543/postgres"

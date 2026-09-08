@@ -4,6 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { usePrivy, type User } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
 
+import type { KosmosUser } from "@kosmos/shared";
+
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Input } from "@/components/ui/Input";
+
 type LinkedAccount = User["linkedAccounts"][number];
 type WalletAccount = Extract<LinkedAccount, { type: "wallet" }>;
 
@@ -25,8 +31,16 @@ export default function SignInPage() {
   const { ready, authenticated, user, login, linkWallet, getAccessToken } =
     usePrivy();
 
-  const [error, setError] = useState<string | null>(null);
+  const [dbUser, setDbUser] = useState<KosmosUser | null>(null);
+  const [label, setLabel] = useState("");
+  const [availability, setAvailability] = useState<{
+    available: boolean;
+    reason?: string;
+  } | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [claiming, setClaiming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const syncingRef = useRef(false);
 
   const externalEthereumWallet = user?.linkedAccounts.find(
@@ -38,7 +52,8 @@ export default function SignInPage() {
       !ready ||
       !authenticated ||
       !externalEthereumWallet ||
-      syncingRef.current
+      syncingRef.current ||
+      dbUser
     ) {
       return;
     }
@@ -68,7 +83,12 @@ export default function SignInPage() {
           throw new Error(body.message ?? "Could not sync your account.");
         }
 
-        router.replace("/home");
+        const syncedUser = body as KosmosUser;
+        setDbUser(syncedUser);
+
+        if (syncedUser.ensSubname) {
+          router.replace(`/${syncedUser.ensSubname}`);
+        }
       } catch (error) {
         setError(
           error instanceof Error
@@ -77,12 +97,86 @@ export default function SignInPage() {
         );
 
         syncingRef.current = false;
+      } finally {
         setSyncing(false);
       }
     }
 
     void syncUser();
-  }, [ready, authenticated, externalEthereumWallet, getAccessToken, router]);
+  }, [
+    ready,
+    authenticated,
+    externalEthereumWallet,
+    dbUser,
+    getAccessToken,
+    router,
+  ]);
+
+  useEffect(() => {
+    if (label.length < 3) {
+      return;
+    }
+
+    const handle = setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `/api/ens/check-availability?label=${encodeURIComponent(label)}`
+        );
+
+        const body = await response.json();
+
+        setAvailability({
+          available: Boolean(body.available),
+          reason: body.reason,
+        });
+      } catch {
+        setAvailability({
+          available: false,
+          reason: "Could not check availability",
+        });
+      }
+    }, 400);
+
+    return () => clearTimeout(handle);
+  }, [label]);
+
+  async function claimId() {
+    setClaiming(true);
+    setError(null);
+
+    try {
+      const token = await getAccessToken();
+
+      if (!token) {
+        throw new Error("Could not get an access token.");
+      }
+
+      const response = await fetch("/api/ens/register", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ label }),
+      });
+
+      const body = await response.json();
+
+      if (!response.ok) {
+        throw new Error(body.message ?? "Failed to claim ID");
+      }
+
+      router.replace(`/${label}`);
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to claim your Kosmos ID"
+      );
+    } finally {
+      setClaiming(false);
+    }
+  }
 
   if (!ready) {
     return (
@@ -94,67 +188,90 @@ export default function SignInPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-6">
-      <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8">
-        <div className="mb-8">
-          <p className="mb-2 text-sm font-medium text-primary">Kosmos</p>
+      <Card className="w-full max-w-md text-center">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          Welcome to Kosmos
+        </h1>
 
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Sign in to Kosmos
-          </h1>
-
-          <p className="mt-3 text-sm leading-6 text-muted-foreground">
-            Sign in with your email and link an external Ethereum wallet to
-            continue.
-          </p>
-        </div>
-
-        {!authenticated ? (
-          <button
-            type="button"
-            onClick={() => login()}
-            className="w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition-opacity hover:opacity-90"
-          >
-            Continue with email
-          </button>
-        ) : !externalEthereumWallet ? (
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Your email is verified. Link your external Ethereum wallet to
-              finish signing in.
+        {!authenticated && (
+          <>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Sign in with your email to get started.
             </p>
 
-            <button
-              type="button"
+            <Button className="mt-6 w-full" onClick={() => login()}>
+              Continue with email
+            </Button>
+          </>
+        )}
+
+        {authenticated && !externalEthereumWallet && (
+          <>
+            <p className="mt-3 text-sm text-muted-foreground">
+              Your email is verified. Link an external Ethereum wallet to
+              continue.
+            </p>
+
+            <Button
+              className="mt-6 w-full"
               onClick={() =>
                 linkWallet({
                   walletChainType: "ethereum-only",
                 })
               }
-              className="w-full rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground transition-opacity hover:opacity-90"
             >
               Link wallet
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Wallet linked successfully.
-            </p>
-
-            <p className="break-all font-mono text-xs text-foreground">
-              {externalEthereumWallet.address}
-            </p>
-
-            {syncing && (
-              <p className="text-sm text-muted-foreground">
-                Setting up your Kosmos account...
-              </p>
-            )}
-          </div>
+            </Button>
+          </>
         )}
 
-        {error && <p className="mt-5 text-sm text-destructive">{error}</p>}
-      </div>
+        {authenticated && externalEthereumWallet && !dbUser && !error && (
+          <p className="mt-6 text-sm text-muted-foreground">
+            {syncing
+              ? "Setting up your Kosmos account..."
+              : "Preparing your account..."}
+          </p>
+        )}
+
+        {authenticated &&
+          externalEthereumWallet &&
+          dbUser &&
+          !dbUser.ensSubname && (
+            <>
+              <p className="mt-3 text-sm leading-6 text-muted-foreground">
+                Claim your Kosmos ID. This becomes{" "}
+                <span className="text-foreground">yourname.kosmos.eth</span>.
+              </p>
+
+              <Input
+                className="mt-6"
+                placeholder="yourname"
+                value={label}
+                onChange={(event) => setLabel(event.target.value.toLowerCase())}
+              />
+
+              {availability && (
+                <p
+                  className={`mt-2 text-xs ${
+                    availability.available ? "text-success" : "text-danger"
+                  }`}
+                >
+                  {availability.available ? "Available!" : availability.reason}
+                </p>
+              )}
+
+              <Button
+                className="mt-4 w-full"
+                disabled={!availability?.available || claiming}
+                onClick={claimId}
+              >
+                {claiming ? "Claiming..." : "Claim your Kosmos ID"}
+              </Button>
+            </>
+          )}
+
+        {error && <p className="mt-5 text-sm text-danger">{error}</p>}
+      </Card>
     </main>
   );
 }
