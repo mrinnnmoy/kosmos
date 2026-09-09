@@ -12,6 +12,17 @@ export interface KosmosUser {
 
 export interface KosmosEvent {
   id: string;
+  hostId: string;
   name: string;
-  // Extended in Commit 13 when event creation actually exists
+  description: string | null;
+  location: string | null;
+  coverImageCid: string | null;
+  startsAt: string;
+  endsAt: string;
+  price: string;
+  capacity: number | null;
+  requiresApproval: boolean;
+  escrowContractAddress: string | null;
+  status: "draft" | "upcoming" | "live" | "ended" | "cancelled";
+  createdAt: string;
 }
