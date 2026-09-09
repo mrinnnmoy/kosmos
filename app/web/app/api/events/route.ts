@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, ne } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { users, events } from "@/lib/db/schema";
 import { getVerifiedPrivyUser } from "@/lib/auth/verify-privy-token";
@@ -7,10 +7,12 @@ import { createEventApiSchema } from "@/lib/validation/event";
 import { uploadToIPFS } from "@/lib/ipfs/upload";
 
 export async function GET() {
-  return NextResponse.json(
-    { message: "Events API GET — coming in Commit 14" },
-    { status: 501 }
-  );
+  const allEvents = await db
+    .select()
+    .from(events)
+    .where(ne(events.status, "draft"));
+
+  return NextResponse.json(allEvents);
 }
 
 export async function POST(request: Request) {

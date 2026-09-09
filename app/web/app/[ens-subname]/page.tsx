@@ -2,8 +2,7 @@ import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { Badge } from "@/components/ui/Badge";
-import { Card } from "@/components/ui/Card";
+import { EventCard } from "@/components/events/EventCard";
 import { db } from "@/lib/db";
 import { events, joinRequests, users } from "@/lib/db/schema";
 
@@ -29,11 +28,8 @@ export default async function UserDashboardPage({
     .from(events)
     .where(eq(events.hostId, profile.id));
 
-  const joinedEvents = await db
-    .select({
-      event: events,
-      request: joinRequests,
-    })
+  const joinedRows = await db
+    .select({ event: events })
     .from(joinRequests)
     .innerJoin(events, eq(joinRequests.eventId, events.id))
     .where(eq(joinRequests.userId, profile.id));
@@ -42,7 +38,7 @@ export default async function UserDashboardPage({
     <main className="mx-auto max-w-4xl px-4 py-16">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">
+          <h1 className="font-heading text-2xl font-bold">
             {profile.firstName ?? ensSubname}
           </h1>
 
@@ -66,7 +62,7 @@ export default async function UserDashboardPage({
       </header>
 
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">
+        <h2 className="font-heading text-lg font-semibold">
           Hosted events
         </h2>
 
@@ -75,43 +71,27 @@ export default async function UserDashboardPage({
             No hosted events yet.
           </p>
         ) : (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {hostedEvents.map((event) => (
-              <Card key={event.id}>
-                <h3 className="font-medium">
-                  {event.name}
-                </h3>
-
-                <Badge className="mt-2">
-                  {event.status}
-                </Badge>
-              </Card>
+              <EventCard key={event.id} event={event} />
             ))}
           </div>
         )}
       </section>
 
       <section className="mt-10">
-        <h2 className="text-lg font-semibold">
+        <h2 className="font-heading text-lg font-semibold">
           Joined events
         </h2>
 
-        {joinedEvents.length === 0 ? (
+        {joinedRows.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">
             No joined events yet — the join flow lands in Commit 17.
           </p>
         ) : (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {joinedEvents.map(({ event, request }) => (
-              <Card key={event.id}>
-                <h3 className="font-medium">
-                  {event.name}
-                </h3>
-
-                <Badge className="mt-2">
-                  {request.status}
-                </Badge>
-              </Card>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            {joinedRows.map(({ event }) => (
+              <EventCard key={event.id} event={event} />
             ))}
           </div>
         )}
