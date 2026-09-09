@@ -313,6 +313,8 @@ DATABASE_URL="postgresql://user:password@host:6543/postgres"
 DIRECT_DATABASE_URL="postgresql://user:password@host:5432/postgres"
 
 # ── IPFS (Pinata / web3.storage) ──────────
+PINATA_JWT=
+PINATA_GATEWAY=gateway.pinata.cloud
 
 # ── Email ─────────────────────────────────
 RESEND_API_KEY=

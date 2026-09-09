@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Badge } from "@/components/ui/Badge";
@@ -39,20 +40,29 @@ export default async function UserDashboardPage({
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-16">
-      <header>
-        <h1 className="text-2xl font-bold">
-          {profile.firstName ?? ensSubname}
-        </h1>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">
+            {profile.firstName ?? ensSubname}
+          </h1>
 
-        <p className="text-muted-foreground">
-          {ensSubname}.kosmos.eth
-        </p>
-
-        {profile.bio && (
-          <p className="mt-2 text-sm">
-            {profile.bio}
+          <p className="text-muted-foreground">
+            {ensSubname}.kosmos.eth
           </p>
-        )}
+
+          {profile.bio && (
+            <p className="mt-2 text-sm">
+              {profile.bio}
+            </p>
+          )}
+        </div>
+
+        <Link
+          href="/create"
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+        >
+          Create Event
+        </Link>
       </header>
 
       <section className="mt-10">
@@ -62,7 +72,7 @@ export default async function UserDashboardPage({
 
         {hostedEvents.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">
-            No hosted events yet — event creation lands in Commit 13.
+            No hosted events yet.
           </p>
         ) : (
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
