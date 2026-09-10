@@ -4,7 +4,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { events, users } from "@/lib/db/schema";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { EventJoinWorldId } from "@/components/worldid/EventJoinWorldId";
 import { ipfsUrl } from "@/lib/ipfs/upload";
 
 export default async function EventDetailPage({
@@ -105,9 +105,7 @@ export default async function EventDetailPage({
           </div>
 
           <div className="mt-8 rounded-xl border border-border bg-surface p-5">
-            <Button disabled className="w-full">
-              Request to Join — coming in Commit 17
-            </Button>
+            <EventJoinWorldId eventId={event.id} />
 
             {event.requiresApproval && (
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">

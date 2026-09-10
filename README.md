@@ -301,6 +301,9 @@ NEXT_PUBLIC_PRIVY_APP_ID=
 PRIVY_APP_SECRET=
 
 # ── World ID ──────────────────────────────
+NEXT_PUBLIC_WORLD_APP_ID=
+NEXT_PUBLIC_WORLD_RP_ID=
+RP_SIGNING_KEY=
 
 # ── Uniswap ───────────────────────────────
 
