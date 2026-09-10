@@ -5,7 +5,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { usePrivy } from "@privy-io/react-auth";
+import {
+  useConnectWallet,
+  usePrivy,
+  type User,
+} from "@privy-io/react-auth";
 import { createPublicClient, http, parseEventLogs } from "viem";
 import { sepolia } from "viem/chains";
 import { CONTRACT_ADDRESSES, EventEscrowFactoryAbi } from "@kosmos/shared";
@@ -17,6 +21,21 @@ import { useKosmosWalletClient } from "@/hooks/useWalletClient";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 
+type LinkedAccount = User["linkedAccounts"][number];
+type WalletAccount = Extract<LinkedAccount, { type: "wallet" }>;
+
+function isExternalEthereumWallet(
+  account: LinkedAccount
+): account is WalletAccount {
+  return (
+    account.type === "wallet" &&
+    account.chainType === "ethereum" &&
+    account.walletClientType !== "privy" &&
+    account.walletClientType !== "privy-v2" &&
+    account.connectorType !== "embedded"
+  );
+}
+
 const publicClient = createPublicClient({
   chain: sepolia,
   transport: http(),
@@ -24,7 +43,8 @@ const publicClient = createPublicClient({
 
 export default function CreateEventPage() {
   const router = useRouter();
-  const { ready, authenticated, getAccessToken } = usePrivy();
+  const { ready, authenticated, user, getAccessToken } = usePrivy();
+  const { connectWallet } = useConnectWallet();
 
   useEffect(() => {
     if (ready && !authenticated) {
@@ -93,7 +113,26 @@ export default function CreateEventPage() {
       // 2. Deploy escrow from the host's wallet
       setStep("deploying");
 
-      const walletClient = await getWalletClient();
+      const externalEthereumWallet = user?.linkedAccounts.find(
+        isExternalEthereumWallet
+      );
+
+      if (!externalEthereumWallet) {
+        throw new Error("Connect an external Ethereum wallet");
+      }
+
+      let walletClient;
+
+      try {
+        walletClient = await getWalletClient(externalEthereumWallet.address);
+      } catch {
+        await connectWallet({
+          walletChainType: "ethereum-only",
+          description: "Connect the wallet linked to your Kosmos account",
+        });
+
+        walletClient = await getWalletClient(externalEthereumWallet.address);
+      }
 
       const startTime = BigInt(
         Math.floor(new Date(values.startsAt).getTime() / 1000)

@@ -8,16 +8,25 @@ import { sepolia } from "viem/chains";
 export function useKosmosWalletClient() {
   const { wallets } = useWallets();
 
-  return useCallback(async () => {
-    const wallet = wallets[0];
-    if (!wallet) throw new Error("No wallet linked");
+  return useCallback(
+    async (walletAddress: string) => {
+      const wallet = wallets.find(
+        (candidate) =>
+          candidate.address.toLowerCase() === walletAddress.toLowerCase()
+      );
 
-    const provider = await wallet.getEthereumProvider();
+      if (!wallet) {
+        throw new Error("Authenticated external wallet is not connected");
+      }
 
-    return createWalletClient({
-      account: wallet.address as `0x${string}`,
-      chain: sepolia,
-      transport: custom(provider),
-    });
-  }, [wallets]);
+      const provider = await wallet.getEthereumProvider();
+
+      return createWalletClient({
+        account: wallet.address as `0x${string}`,
+        chain: sepolia,
+        transport: custom(provider),
+      });
+    },
+    [wallets]
+  );
 }

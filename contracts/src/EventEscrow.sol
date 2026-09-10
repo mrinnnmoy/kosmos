@@ -20,6 +20,7 @@ contract EventEscrow is Ownable, ReentrancyGuard {
     uint256 public immutable startTime;
     uint256 public immutable endTime;
     bool public eventEnded;
+    uint256 public unallocatedBalance;
 
     mapping(address => uint256) public deposits;
     mapping(address => DepositStatus) public statusOf;
@@ -35,6 +36,7 @@ contract EventEscrow is Ownable, ReentrancyGuard {
     error EventAlreadyEnded();
     error TooLateToCancel();
     error NoDeposit();
+    error InsufficientUnallocatedBalance();
     error TransferFailed();
 
     constructor(address host, uint256 _startTime, uint256 _endTime, address _factory, address _ticketNFT)
@@ -46,6 +48,32 @@ contract EventEscrow is Ownable, ReentrancyGuard {
         endTime = _endTime;
         factory = _factory;
         ticketNFT = _ticketNFT;
+    }
+
+    /// @notice Accepts native ETH sent directly by payment routes such as Uniswap.
+    /// The attendee association is recorded separately after payment verification.
+    receive() external payable {
+        if (msg.value == 0) revert NoDeposit();
+
+        unallocatedBalance += msg.value;
+    }
+
+    /// @notice Associates previously received native ETH with an attendee.
+    /// Used after the payment has been independently verified.
+    function recordDeposit(address attendee, uint256 amount) external onlyOwner {
+        if (amount == 0) revert NoDeposit();
+        if (statusOf[attendee] != DepositStatus.None) {
+            revert InvalidState();
+        }
+        if (amount > unallocatedBalance) {
+            revert InsufficientUnallocatedBalance();
+        }
+
+        unallocatedBalance -= amount;
+        deposits[attendee] = amount;
+        statusOf[attendee] = DepositStatus.Pending;
+
+        emit Deposited(attendee, amount);
     }
 
     /// @notice Records a deposit for an attendee.

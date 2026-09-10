@@ -4,7 +4,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { events, users } from "@/lib/db/schema";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
+import { EventJoinWorldId } from "@/components/worldid/EventJoinWorldId";
 import { ipfsUrl } from "@/lib/ipfs/upload";
 
 export default async function EventDetailPage({
@@ -92,6 +92,20 @@ export default async function EventDetailPage({
               <p className="mt-1 text-sm text-muted-foreground">{time}</p>
             </div>
 
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Entry fee
+              </p>
+              <p className="mt-1 text-sm font-medium text-foreground">
+                {Number(event.price) > 0 ? `${event.price} ETH` : "Free"}
+              </p>
+              {Number(event.price) > 0 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Pay with ETH or a supported token.
+                </p>
+              )}
+            </div>
+
             {event.location && (
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -105,9 +119,10 @@ export default async function EventDetailPage({
           </div>
 
           <div className="mt-8 rounded-xl border border-border bg-surface p-5">
-            <Button disabled className="w-full">
-              Request to Join — coming in Commit 17
-            </Button>
+            <EventJoinWorldId
+              eventId={event.id}
+              price={event.price}
+            />
 
             {event.requiresApproval && (
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">

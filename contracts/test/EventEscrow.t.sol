@@ -28,13 +28,74 @@ contract EventEscrowTest is Test {
 
         vm.prank(host);
         address escrowAddr = factory.createEscrow(startTime, endTime);
-        escrow = EventEscrow(escrowAddr);
+        escrow = EventEscrow(payable(escrowAddr));
 
         vm.deal(alice, 10 ether);
         vm.deal(bob, 10 ether);
     }
 
     // ── deposit ──────────────────────────────────────────
+
+    function test_RawEthIncreasesUnallocatedBalance() public {
+        uint256 amount = 0.1 ether;
+
+        vm.deal(address(this), amount);
+
+        (bool ok,) = address(escrow).call{value: amount}("");
+        assertTrue(ok);
+
+        assertEq(escrow.unallocatedBalance(), amount);
+    }
+
+    function test_RecordDepositMovesUnallocatedEthToAttendee() public {
+        uint256 amount = 0.1 ether;
+
+        vm.deal(address(this), amount);
+
+        (bool ok,) = address(escrow).call{value: amount}("");
+        assertTrue(ok);
+
+        vm.prank(host);
+        escrow.recordDeposit(alice, amount);
+
+        assertEq(escrow.unallocatedBalance(), 0);
+        assertEq(escrow.deposits(alice), amount);
+    }
+
+    function test_RecordDepositSetsPendingStatus() public {
+        uint256 amount = 0.1 ether;
+
+        vm.deal(address(this), amount);
+
+        (bool ok,) = address(escrow).call{value: amount}("");
+        assertTrue(ok);
+
+        vm.prank(host);
+        escrow.recordDeposit(alice, amount);
+
+        assertEq(
+            uint256(escrow.statusOf(alice)),
+            uint256(EventEscrow.DepositStatus.Pending)
+        );
+    }
+
+    function test_RevertWhen_RecordDepositExceedsUnallocatedBalance() public {
+        uint256 received = 0.1 ether;
+        uint256 requested = 0.2 ether;
+
+        vm.deal(address(this), received);
+
+        (bool ok,) = address(escrow).call{value: received}("");
+        assertTrue(ok);
+
+        vm.expectRevert(
+            EventEscrow.InsufficientUnallocatedBalance.selector
+        );
+
+        vm.prank(host);
+        escrow.recordDeposit(alice, requested);
+    }
+
 
     function test_Deposit() public {
         vm.prank(alice);
