@@ -6,19 +6,28 @@ import { getVerifiedPrivyUser } from "@/lib/auth/verify-privy-token";
 import { db } from "@/lib/db";
 import { events } from "@/lib/db/schema";
 import {
-  getQuote,
+  buildSwap,
   NATIVE_ETH_ADDRESS,
-  UNISWAP_PROXY_ADDRESS,
+  SEPOLIA_CHAIN_ID,
 } from "@/lib/uniswap/client";
 
-type QuoteResponse = {
-  quote?: {
-    input?: {
-      amount?: string;
-      maximumAmount?: string;
-    };
+type ClassicQuote = Record<string, unknown> & {
+  chainId?: number;
+  swapper?: string;
+  input?: {
+    token?: string;
+    amount?: string;
   };
+  output?: {
+    token?: string;
+    amount?: string;
+    recipient?: string;
+  };
+};
+
+type QuoteResponse = {
   routing?: string;
+  quote?: ClassicQuote;
 };
 
 export async function POST(request: Request) {
@@ -56,28 +65,21 @@ export async function POST(request: Request) {
 
   const walletAddress = externalEthereumWallet.address;
 
-  const { eventId, tokenIn } = (await request.json()) as {
+  const { eventId, quoteResponse } = (await request.json()) as {
     eventId?: string;
-    tokenIn?: string;
+    quoteResponse?: QuoteResponse;
   };
 
-  if (!eventId || !tokenIn) {
+  if (!eventId || !quoteResponse?.quote) {
     return NextResponse.json(
-      { message: "eventId and tokenIn are required" },
+      { message: "eventId and quoteResponse are required" },
       { status: 400 }
     );
   }
 
-  if (!isAddress(tokenIn)) {
+  if (quoteResponse.routing !== "CLASSIC") {
     return NextResponse.json(
-      { message: "Invalid input token address" },
-      { status: 400 }
-    );
-  }
-
-  if (tokenIn.toLowerCase() === NATIVE_ETH_ADDRESS.toLowerCase()) {
-    return NextResponse.json(
-      { message: "Commit 16 payment requires an ERC-20 token" },
+      { message: "Unsupported Uniswap routing type" },
       { status: 400 }
     );
   }
@@ -102,10 +104,10 @@ export async function POST(request: Request) {
     );
   }
 
-  let amountOutWei: string;
+  let expectedAmountOut: string;
 
   try {
-    amountOutWei = parseEther(event.price).toString();
+    expectedAmountOut = parseEther(event.price).toString();
   } catch {
     return NextResponse.json(
       { message: "Invalid event price" },
@@ -113,51 +115,62 @@ export async function POST(request: Request) {
     );
   }
 
-  if (BigInt(amountOutWei) <= BigInt(0)) {
+  const quote = quoteResponse.quote;
+
+  if (
+    quote.swapper?.toLowerCase() !== walletAddress.toLowerCase()
+  ) {
     return NextResponse.json(
-      { message: "This event does not require a token swap" },
+      { message: "Quote swapper does not match authenticated wallet" },
+      { status: 400 }
+    );
+  }
+
+  if (
+    quote.output?.token?.toLowerCase() !==
+      NATIVE_ETH_ADDRESS.toLowerCase()
+  ) {
+    return NextResponse.json(
+      { message: "Quote output token must be native ETH" },
+      { status: 400 }
+    );
+  }
+
+  if (quote.output.amount !== expectedAmountOut) {
+    return NextResponse.json(
+      { message: "Quote output amount does not match event price" },
+      { status: 400 }
+    );
+  }
+
+  if (
+    quote.output.recipient?.toLowerCase() !==
+      event.escrowContractAddress.toLowerCase()
+  ) {
+    return NextResponse.json(
+      { message: "Quote recipient does not match event escrow" },
+      { status: 400 }
+    );
+  }
+
+  if (
+    quote.chainId !== undefined &&
+    quote.chainId !== SEPOLIA_CHAIN_ID
+  ) {
+    return NextResponse.json(
+      { message: "Quote is not for Sepolia" },
       { status: 400 }
     );
   }
 
   try {
-    const quoteResponse = (await getQuote({
-      tokenIn,
-      swapper: walletAddress,
-      recipient: event.escrowContractAddress,
-      amount: amountOutWei,
-      type: "EXACT_OUTPUT",
-    })) as QuoteResponse;
-
-    if (quoteResponse.routing !== "CLASSIC") {
-      return NextResponse.json(
-        { message: "No supported on-chain Uniswap swap route found" },
-        { status: 502 }
-      );
-    }
-
-    const amountInRequired =
-      quoteResponse.quote?.input?.maximumAmount ??
-      quoteResponse.quote?.input?.amount;
-
-    if (!amountInRequired) {
-      return NextResponse.json(
-        { message: "Uniswap quote did not include an input amount" },
-        { status: 502 }
-      );
-    }
-
-    return NextResponse.json({
-      quoteResponse,
-      escrowAddress: event.escrowContractAddress,
-      approvalSpender: UNISWAP_PROXY_ADDRESS,
-      maximumAmount: amountInRequired,
-    });
+    const swap = await buildSwap(quote);
+    return NextResponse.json(swap);
   } catch (error) {
-    console.error("Uniswap quote failed", error);
+    console.error("Uniswap swap build failed", error);
 
     return NextResponse.json(
-      { message: "Failed to fetch Uniswap quote" },
+      { message: "Failed to build Uniswap swap" },
       { status: 502 }
     );
   }

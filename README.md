@@ -306,6 +306,7 @@ NEXT_PUBLIC_WORLD_RP_ID=
 RP_SIGNING_KEY=
 
 # ── Uniswap ───────────────────────────────
+UNISWAP_API_KEY=
 
 # ── ENS ───────────────────────────────────
 SEPOLIA_RPC_URL=

@@ -27,7 +27,7 @@ contract TicketNFTTest is Test {
         endTime = block.timestamp + 2 days;
 
         vm.prank(host);
-        escrow = EventEscrow(factory.createEscrow(startTime, endTime));
+        escrow = EventEscrow(payable(factory.createEscrow(startTime, endTime)));
 
         vm.deal(alice, 10 ether);
         vm.deal(bob, 10 ether);
@@ -75,7 +75,7 @@ contract TicketNFTTest is Test {
 
         address freshEscrowAddr = factory.createEscrow(block.timestamp + 1 days, block.timestamp + 2 days);
 
-        EventEscrow freshEscrow = EventEscrow(freshEscrowAddr);
+        EventEscrow freshEscrow = EventEscrow(payable(freshEscrowAddr));
 
         address[] memory checkedIn = new address[](1);
         checkedIn[0] = alice;

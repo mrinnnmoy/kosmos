@@ -1,7 +1,6 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
-
 import { useState } from "react";
 import {
   IDKitRequestWidget,
@@ -15,11 +14,13 @@ const WORLD_ACTION = "join-kosmos-event";
 type SelfieCheckButtonProps = {
   eventId: string;
   walletAddress: string;
+  onVerified: () => void;
 };
 
 export function SelfieCheckButton({
   eventId,
   walletAddress,
+  onVerified,
 }: SelfieCheckButtonProps) {
   const { getAccessToken } = usePrivy();
   const [open, setOpen] = useState(false);
@@ -109,18 +110,11 @@ export function SelfieCheckButton({
   function handleSuccess() {
     setVerified(true);
     setError(null);
+    onVerified();
   }
 
   if (verified) {
-    return (
-      <button
-        type="button"
-        disabled
-        className="w-full cursor-not-allowed rounded-xl bg-emerald-500/15 px-4 py-3 font-medium text-emerald-400"
-      >
-        Continue to join
-      </button>
-    );
+    return null;
   }
 
   return (

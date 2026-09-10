@@ -1,411 +1,451 @@
 export const EventEscrowAbi = [
   {
-    type: "constructor",
-    inputs: [
+    "type": "constructor",
+    "inputs": [
       {
-        name: "host",
-        type: "address",
-        internalType: "address",
+        "name": "host",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "_startTime",
-        type: "uint256",
-        internalType: "uint256",
+        "name": "_startTime",
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
-        name: "_endTime",
-        type: "uint256",
-        internalType: "uint256",
+        "name": "_endTime",
+        "type": "uint256",
+        "internalType": "uint256"
       },
       {
-        name: "_factory",
-        type: "address",
-        internalType: "address",
+        "name": "_factory",
+        "type": "address",
+        "internalType": "address"
       },
       {
-        name: "_ticketNFT",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "_ticketNFT",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    stateMutability: "nonpayable",
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "batchPayout",
-    inputs: [
+    "type": "receive",
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "batchPayout",
+    "inputs": [
       {
-        name: "attendees",
-        type: "address[]",
-        internalType: "address[]",
-      },
+        "name": "attendees",
+        "type": "address[]",
+        "internalType": "address[]"
+      }
     ],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "cancelByAttendee",
-    inputs: [],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "type": "function",
+    "name": "cancelByAttendee",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "deposit",
-    inputs: [
+    "type": "function",
+    "name": "deposit",
+    "inputs": [
       {
-        name: "attendee",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "attendee",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    outputs: [],
-    stateMutability: "payable",
+    "outputs": [],
+    "stateMutability": "payable"
   },
   {
-    type: "function",
-    name: "deposits",
-    inputs: [
+    "type": "function",
+    "name": "deposits",
+    "inputs": [
       {
-        name: "",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    outputs: [
+    "outputs": [
       {
-        name: "",
-        type: "uint256",
-        internalType: "uint256",
-      },
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "endEvent",
-    inputs: [],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "type": "function",
+    "name": "endEvent",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "endTime",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "endTime",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "uint256",
-        internalType: "uint256",
-      },
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "eventEnded",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "eventEnded",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "bool",
-        internalType: "bool",
-      },
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "factory",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "factory",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "mintTickets",
-    inputs: [
+    "type": "function",
+    "name": "mintTickets",
+    "inputs": [
       {
-        name: "checkedInAttendees",
-        type: "address[]",
-        internalType: "address[]",
+        "name": "checkedInAttendees",
+        "type": "address[]",
+        "internalType": "address[]"
       },
       {
-        name: "metadataCID",
-        type: "string",
-        internalType: "string",
-      },
+        "name": "metadataCID",
+        "type": "string",
+        "internalType": "string"
+      }
     ],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "owner",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "owner",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "refund",
-    inputs: [
+    "type": "function",
+    "name": "recordDeposit",
+    "inputs": [
       {
-        name: "attendee",
-        type: "address",
-        internalType: "address",
+        "name": "attendee",
+        "type": "address",
+        "internalType": "address"
       },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "release",
-    inputs: [
+    "type": "function",
+    "name": "refund",
+    "inputs": [
       {
-        name: "attendee",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "attendee",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "renounceOwnership",
-    inputs: [],
-    outputs: [],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "startTime",
-    inputs: [],
-    outputs: [
+    "type": "function",
+    "name": "release",
+    "inputs": [
       {
-        name: "",
-        type: "uint256",
-        internalType: "uint256",
-      },
+        "name": "attendee",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    stateMutability: "view",
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "function",
-    name: "statusOf",
-    inputs: [
+    "type": "function",
+    "name": "renounceOwnership",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "startTime",
+    "inputs": [],
+    "outputs": [
       {
-        name: "",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    outputs: [
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "statusOf",
+    "inputs": [
       {
-        name: "",
-        type: "uint8",
-        internalType: "enum EventEscrow.DepositStatus",
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    stateMutability: "view",
-  },
-  {
-    type: "function",
-    name: "ticketNFT",
-    inputs: [],
-    outputs: [
+    "outputs": [
       {
-        name: "",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "",
+        "type": "uint8",
+        "internalType": "enum EventEscrow.DepositStatus"
+      }
     ],
-    stateMutability: "view",
+    "stateMutability": "view"
   },
   {
-    type: "function",
-    name: "transferOwnership",
-    inputs: [
+    "type": "function",
+    "name": "ticketNFT",
+    "inputs": [],
+    "outputs": [
       {
-        name: "newOwner",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    outputs: [],
-    stateMutability: "nonpayable",
+    "stateMutability": "view"
   },
   {
-    type: "event",
-    name: "Deposited",
-    inputs: [
+    "type": "function",
+    "name": "transferOwnership",
+    "inputs": [
       {
-        name: "attendee",
-        type: "address",
-        indexed: true,
-        internalType: "address",
-      },
-      {
-        name: "amount",
-        type: "uint256",
-        indexed: false,
-        internalType: "uint256",
-      },
+        "name": "newOwner",
+        "type": "address",
+        "internalType": "address"
+      }
     ],
-    anonymous: false,
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
-    type: "event",
-    name: "EventEnded",
-    inputs: [],
-    anonymous: false,
-  },
-  {
-    type: "event",
-    name: "OwnershipTransferred",
-    inputs: [
+    "type": "function",
+    "name": "unallocatedBalance",
+    "inputs": [],
+    "outputs": [
       {
-        name: "previousOwner",
-        type: "address",
-        indexed: true,
-        internalType: "address",
-      },
-      {
-        name: "newOwner",
-        type: "address",
-        indexed: true,
-        internalType: "address",
-      },
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    anonymous: false,
+    "stateMutability": "view"
   },
   {
-    type: "event",
-    name: "PaidOut",
-    inputs: [
+    "type": "event",
+    "name": "Deposited",
+    "inputs": [
       {
-        name: "attendee",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "attendee",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "amount",
-        type: "uint256",
-        indexed: false,
-        internalType: "uint256",
-      },
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "Refunded",
-    inputs: [
+    "type": "event",
+    "name": "EventEnded",
+    "inputs": [],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OwnershipTransferred",
+    "inputs": [
       {
-        name: "attendee",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "previousOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
       {
-        name: "amount",
-        type: "uint256",
-        indexed: false,
-        internalType: "uint256",
-      },
-      {
-        name: "reason",
-        type: "uint8",
-        indexed: false,
-        internalType: "enum EventEscrow.DepositStatus",
-      },
+        "name": "newOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
     ],
-    anonymous: false,
+    "anonymous": false
   },
   {
-    type: "event",
-    name: "Released",
-    inputs: [
+    "type": "event",
+    "name": "PaidOut",
+    "inputs": [
       {
-        name: "attendee",
-        type: "address",
-        indexed: true,
-        internalType: "address",
+        "name": "attendee",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
-    ],
-    anonymous: false,
-  },
-  {
-    type: "error",
-    name: "EventAlreadyEnded",
-    inputs: [],
-  },
-  {
-    type: "error",
-    name: "EventNotEnded",
-    inputs: [],
-  },
-  {
-    type: "error",
-    name: "InvalidState",
-    inputs: [],
-  },
-  {
-    type: "error",
-    name: "NoDeposit",
-    inputs: [],
-  },
-  {
-    type: "error",
-    name: "OwnableInvalidOwner",
-    inputs: [
       {
-        name: "owner",
-        type: "address",
-        internalType: "address",
-      },
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      }
     ],
+    "anonymous": false
   },
   {
-    type: "error",
-    name: "OwnableUnauthorizedAccount",
-    inputs: [
+    "type": "event",
+    "name": "Refunded",
+    "inputs": [
       {
-        name: "account",
-        type: "address",
-        internalType: "address",
+        "name": "attendee",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
       },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "reason",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "enum EventEscrow.DepositStatus"
+      }
     ],
+    "anonymous": false
   },
   {
-    type: "error",
-    name: "ReentrancyGuardReentrantCall",
-    inputs: [],
+    "type": "event",
+    "name": "Released",
+    "inputs": [
+      {
+        "name": "attendee",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
   },
   {
-    type: "error",
-    name: "TooLateToCancel",
-    inputs: [],
+    "type": "error",
+    "name": "EventAlreadyEnded",
+    "inputs": []
   },
   {
-    type: "error",
-    name: "TransferFailed",
-    inputs: [],
+    "type": "error",
+    "name": "EventNotEnded",
+    "inputs": []
   },
+  {
+    "type": "error",
+    "name": "InsufficientUnallocatedBalance",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InvalidState",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoDeposit",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "OwnableInvalidOwner",
+    "inputs": [
+      {
+        "name": "owner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "OwnableUnauthorizedAccount",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ReentrancyGuardReentrantCall",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TooLateToCancel",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TransferFailed",
+    "inputs": []
+  }
 ] as const;

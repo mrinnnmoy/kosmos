@@ -92,6 +92,20 @@ export default async function EventDetailPage({
               <p className="mt-1 text-sm text-muted-foreground">{time}</p>
             </div>
 
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Entry fee
+              </p>
+              <p className="mt-1 text-sm font-medium text-foreground">
+                {Number(event.price) > 0 ? `${event.price} ETH` : "Free"}
+              </p>
+              {Number(event.price) > 0 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Pay with ETH or a supported token.
+                </p>
+              )}
+            </div>
+
             {event.location && (
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -105,7 +119,10 @@ export default async function EventDetailPage({
           </div>
 
           <div className="mt-8 rounded-xl border border-border bg-surface p-5">
-            <EventJoinWorldId eventId={event.id} />
+            <EventJoinWorldId
+              eventId={event.id}
+              price={event.price}
+            />
 
             {event.requiresApproval && (
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">

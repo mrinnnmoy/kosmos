@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import { usePrivy, type User } from "@privy-io/react-auth";
 
 import { SelfieCheckButton } from "@/components/worldid/SelfieCheckButton";
+import { UniswapPayButton } from "@/components/join/UniswapPayButton";
+import { Button } from "@/components/ui/Button";
 
 type LinkedAccount = User["linkedAccounts"][number];
 type WalletAccount = Extract<LinkedAccount, { type: "wallet" }>;
@@ -21,10 +24,17 @@ function isExternalEthereumWallet(
 
 export function EventJoinWorldId({
   eventId,
+  price,
 }: {
   eventId: string;
+  price: string;
 }) {
   const { ready, authenticated, user } = usePrivy();
+
+  const [verified, setVerified] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+
+  const isPaid = Number(price) > 0;
 
   const externalEthereumWallet = user?.linkedAccounts.find(
     isExternalEthereumWallet
@@ -66,8 +76,41 @@ export function EventJoinWorldId({
     );
   }
 
+  if (!verified) {
+    return (
+      <SelfieCheckButton
+        eventId={eventId}
+        walletAddress={externalEthereumWallet.address}
+        onVerified={() => setVerified(true)}
+      />
+    );
+  }
+
+  if (!isPaid) {
+    return (
+      <Button
+        type="button"
+        className="w-full"
+      >
+        Continue to join
+      </Button>
+    );
+  }
+
+  if (!showPayment) {
+    return (
+      <Button
+        type="button"
+        className="w-full"
+        onClick={() => setShowPayment(true)}
+      >
+        Continue to pay
+      </Button>
+    );
+  }
+
   return (
-    <SelfieCheckButton
+    <UniswapPayButton
       eventId={eventId}
       walletAddress={externalEthereumWallet.address}
     />
