@@ -325,6 +325,7 @@ RESEND_API_KEY=
 EMAIL_FROM=
 
 # ── App ────────────────────────────────────
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 > Not yet finalized, variable names will be filled in as each integration is scaffolded.
@@ -353,8 +354,8 @@ A complete step-by-step checklist for taking this dapp from first run to a worki
 16. Uniswap swap-to-escrow payment flow
 17. Request-to-join and host approve/deny flow
 18. Cancellation and refund flow
-19. Co-host Enhanced Access Control permissions
-20. 24-hour reminder scheduler
+19. Co-host Enhanced Access Control permissions (optional)
+20. 24-hour reminder scheduler (optional)
 21. Check-in scanner
 22. Start/end event batch payout and NFT mint
 23. Cross-page polish and QA

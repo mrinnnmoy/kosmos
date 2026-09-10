@@ -122,9 +122,12 @@ export default async function EventDetailPage({
             <EventJoinWorldId
               eventId={event.id}
               price={event.price}
+              escrowAddress={event.escrowContractAddress}
+              hostWalletAddress={host?.linkedWallet ?? null}
+              startsAt={event.startsAt}
             />
 
-            {event.requiresApproval && (
+            {(event.requiresApproval || Number(event.price) > 0) && (
               <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
                 The host reviews every request before it&apos;s confirmed.
               </p>

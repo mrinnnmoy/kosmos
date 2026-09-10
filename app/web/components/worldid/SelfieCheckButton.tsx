@@ -1,7 +1,7 @@
 "use client";
 
 import { usePrivy } from "@privy-io/react-auth";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   IDKitRequestWidget,
   selfieCheckLegacy,
@@ -14,7 +14,10 @@ const WORLD_ACTION = "join-kosmos-event";
 type SelfieCheckButtonProps = {
   eventId: string;
   walletAddress: string;
-  onVerified: () => void;
+  onVerified: (
+    nullifier: string,
+    idkitResponse: IDKitResult
+  ) => void;
 };
 
 export function SelfieCheckButton({
@@ -28,6 +31,8 @@ export function SelfieCheckButton({
   const [loading, setLoading] = useState(false);
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const verifiedNullifierRef = useRef<string | null>(null);
+  const verifiedResultRef = useRef<IDKitResult | null>(null);
 
   const appId = process.env.NEXT_PUBLIC_WORLD_APP_ID as
     | `app_${string}`
@@ -98,19 +103,34 @@ export function SelfieCheckButton({
       }),
     });
 
-    if (!response.ok) {
-      const body = await response.json().catch(() => null);
+    const body = await response.json().catch(() => null);
 
+    if (!response.ok) {
       throw new Error(
         body?.message ?? "World ID verification failed"
       );
     }
+
+    if (!body?.nullifier) {
+      throw new Error("World ID verification did not return a nullifier");
+    }
+
+    verifiedNullifierRef.current = body.nullifier;
+    verifiedResultRef.current = result;
   }
 
   function handleSuccess() {
+    const nullifier = verifiedNullifierRef.current;
+    const idkitResponse = verifiedResultRef.current;
+
+    if (!nullifier || !idkitResponse) {
+      setError("World ID verification result is missing");
+      return;
+    }
+
     setVerified(true);
     setError(null);
-    onVerified();
+    onVerified(nullifier, idkitResponse);
   }
 
   if (verified) {

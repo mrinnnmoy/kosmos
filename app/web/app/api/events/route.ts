@@ -67,7 +67,8 @@ export async function POST(request: Request) {
       endsAt: new Date(data.endsAt),
       price: String(data.price),
       capacity: data.capacity ?? null,
-      requiresApproval: data.requiresApproval,
+      requiresApproval:
+        Number(data.price) > 0 ? true : data.requiresApproval,
       status: "draft",
     })
     .returning();

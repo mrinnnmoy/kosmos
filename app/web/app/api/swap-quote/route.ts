@@ -6,18 +6,23 @@ import { getVerifiedPrivyUser } from "@/lib/auth/verify-privy-token";
 import { db } from "@/lib/db";
 import { events } from "@/lib/db/schema";
 import {
+  checkApproval,
   getQuote,
   NATIVE_ETH_ADDRESS,
-  UNISWAP_PROXY_ADDRESS,
 } from "@/lib/uniswap/client";
 
 type QuoteResponse = {
   quote?: {
+    swapper?: string;
     input?: {
       amount?: string;
       maximumAmount?: string;
     };
+    output?: {
+      amount?: string;
+    };
   };
+  permitData?: unknown;
   routing?: string;
 };
 
@@ -124,10 +129,11 @@ export async function POST(request: Request) {
     const quoteResponse = (await getQuote({
       tokenIn,
       swapper: walletAddress,
-      recipient: event.escrowContractAddress,
+      recipient: walletAddress,
       amount: amountOutWei,
       type: "EXACT_OUTPUT",
     })) as QuoteResponse;
+
 
     if (quoteResponse.routing !== "CLASSIC") {
       return NextResponse.json(
@@ -147,10 +153,32 @@ export async function POST(request: Request) {
       );
     }
 
+    const approvalCheck = await checkApproval({
+      walletAddress,
+      token: tokenIn,
+      amount: amountInRequired,
+    });
+
+
+    const approval =
+      approvalCheck &&
+      typeof approvalCheck === "object" &&
+      "approval" in approvalCheck
+        ? approvalCheck.approval
+        : null;
+
+    const cancel =
+      approvalCheck &&
+      typeof approvalCheck === "object" &&
+      "cancel" in approvalCheck
+        ? approvalCheck.cancel
+        : null;
+
     return NextResponse.json({
       quoteResponse,
       escrowAddress: event.escrowContractAddress,
-      approvalSpender: UNISWAP_PROXY_ADDRESS,
+      approval: approval ?? null,
+      cancel: cancel ?? null,
       maximumAmount: amountInRequired,
     });
   } catch (error) {
