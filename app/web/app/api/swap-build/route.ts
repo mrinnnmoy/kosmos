@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { isAddress, parseEther } from "viem";
+import { isAddress, isHex, parseEther } from "viem";
 
 import { getVerifiedPrivyUser } from "@/lib/auth/verify-privy-token";
 import { db } from "@/lib/db";
@@ -28,6 +28,7 @@ type ClassicQuote = Record<string, unknown> & {
 type QuoteResponse = {
   routing?: string;
   quote?: ClassicQuote;
+  permitData?: unknown;
 };
 
 export async function POST(request: Request) {
@@ -65,14 +66,43 @@ export async function POST(request: Request) {
 
   const walletAddress = externalEthereumWallet.address;
 
-  const { eventId, quoteResponse } = (await request.json()) as {
-    eventId?: string;
-    quoteResponse?: QuoteResponse;
-  };
+  const { eventId, quoteResponse, signature } =
+    (await request.json()) as {
+      eventId?: string;
+      quoteResponse?: QuoteResponse;
+      signature?: string;
+    };
 
   if (!eventId || !quoteResponse?.quote) {
     return NextResponse.json(
       { message: "eventId and quoteResponse are required" },
+      { status: 400 }
+    );
+  }
+
+  const permitData =
+    quoteResponse.permitData &&
+    typeof quoteResponse.permitData === "object"
+      ? quoteResponse.permitData as Record<string, unknown>
+      : null;
+
+  if (quoteResponse.permitData != null && !permitData) {
+    return NextResponse.json(
+      { message: "Invalid Permit2 data" },
+      { status: 400 }
+    );
+  }
+
+  if (permitData && (!signature || !isHex(signature))) {
+    return NextResponse.json(
+      { message: "Permit2 signature is required" },
+      { status: 400 }
+    );
+  }
+
+  if (!permitData && signature) {
+    return NextResponse.json(
+      { message: "Unexpected Permit2 signature" },
       { status: 400 }
     );
   }
@@ -145,10 +175,10 @@ export async function POST(request: Request) {
 
   if (
     quote.output.recipient?.toLowerCase() !==
-      event.escrowContractAddress.toLowerCase()
+      walletAddress.toLowerCase()
   ) {
     return NextResponse.json(
-      { message: "Quote recipient does not match event escrow" },
+      { message: "Quote recipient does not match authenticated wallet" },
       { status: 400 }
     );
   }
@@ -164,7 +194,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const swap = await buildSwap(quote);
+    const swap = await buildSwap(
+      quote,
+      permitData,
+      permitData ? signature : undefined
+    );
+
     return NextResponse.json(swap);
   } catch (error) {
     console.error("Uniswap swap build failed", error);

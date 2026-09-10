@@ -3,7 +3,7 @@
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   useConnectWallet,
@@ -62,6 +62,8 @@ export default function CreateEventPage() {
   const {
     register,
     handleSubmit,
+    control,
+    setValue,
     formState: { errors },
   } = useForm<CreateEventFormValues>({
     resolver: zodResolver(createEventFormSchema),
@@ -69,6 +71,18 @@ export default function CreateEventPage() {
       requiresApproval: false,
     },
   });
+
+  const eventPrice = useWatch({
+    control,
+    name: "price",
+  });
+  const isPaidEvent = Number(eventPrice ?? 0) > 0;
+
+  useEffect(() => {
+    if (isPaidEvent) {
+      setValue("requiresApproval", true);
+    }
+  }, [isPaidEvent, setValue]);
 
   async function onSubmit(values: CreateEventFormValues) {
     setError(null);
@@ -90,7 +104,10 @@ export default function CreateEventPage() {
         "capacity",
         values.capacity ? String(values.capacity) : ""
       );
-      formData.append("requiresApproval", String(values.requiresApproval));
+      formData.append(
+        "requiresApproval",
+        String(Number(values.price) > 0 ? true : values.requiresApproval)
+      );
 
       if (coverImage) {
         formData.append("coverImage", coverImage);
@@ -307,14 +324,26 @@ export default function CreateEventPage() {
           </div>
         </div>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            {...register("requiresApproval")}
-            className="h-4 w-4 rounded border-border"
-          />
-          Require host approval to join
-        </label>
+        <div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              {...register("requiresApproval")}
+              disabled={isPaidEvent}
+              className="h-4 w-4 rounded border-border"
+            />
+            {isPaidEvent
+              ? "Host approval required for paid events"
+              : "Require host approval to join"}
+          </label>
+
+          {isPaidEvent && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Paid joins use the event escrow, so the host must confirm the
+              request before the ticket is approved.
+            </p>
+          )}
+        </div>
 
         {error && <p className="text-sm text-danger">{error}</p>}
 

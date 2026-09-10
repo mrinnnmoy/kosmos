@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -32,7 +32,12 @@ export default async function UserDashboardPage({
     .select({ event: events })
     .from(joinRequests)
     .innerJoin(events, eq(joinRequests.eventId, events.id))
-    .where(eq(joinRequests.userId, profile.id));
+    .where(
+      and(
+        eq(joinRequests.userId, profile.id),
+        eq(joinRequests.status, "approved")
+      )
+    );
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-16">

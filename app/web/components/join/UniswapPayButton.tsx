@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { useConnectWallet, usePrivy } from "@privy-io/react-auth";
 import {
   createPublicClient,
-  encodeFunctionData,
+  decodeFunctionData,
   formatEther,
   formatUnits,
   http,
@@ -14,6 +14,7 @@ import {
   type Hex,
 } from "viem";
 import { sepolia } from "viem/chains";
+import { EventEscrowAbi } from "@kosmos/shared";
 
 import { Button } from "@/components/ui/Button";
 import { useKosmosWalletClient } from "@/hooks/useWalletClient";
@@ -21,20 +22,10 @@ import { useKosmosWalletClient } from "@/hooks/useWalletClient";
 const SEPOLIA_USDC =
   "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
 
-const UNISWAP_PROXY =
-  "0x0000000085E102724e78eCd2F45DC9cA239Affad";
+const PERMIT2_ADDRESS =
+  "0x000000000022D473030F116dDEE9F6B43aC78BA3";
 
 const ERC20_ABI = [
-  {
-    type: "function",
-    name: "allowance",
-    stateMutability: "view",
-    inputs: [
-      { name: "owner", type: "address" },
-      { name: "spender", type: "address" },
-    ],
-    outputs: [{ type: "uint256" }],
-  },
   {
     type: "function",
     name: "approve",
@@ -60,6 +51,32 @@ type ApiTransaction = {
   chainId?: number;
 };
 
+type PermitData = {
+  domain?: {
+    name?: string;
+    version?: string;
+    chainId?: number;
+    verifyingContract?: string;
+  };
+  types?: Record<
+    string,
+    readonly {
+      name: string;
+      type: string;
+    }[]
+  >;
+  values?: {
+    details?: {
+      token?: string;
+      amount?: string;
+      expiration?: string;
+      nonce?: string;
+    };
+    spender?: string;
+    sigDeadline?: string;
+  };
+};
+
 type QuoteResponse = {
   routing?: string;
   quote?: {
@@ -75,15 +92,16 @@ type QuoteResponse = {
       recipient?: string;
     };
   };
+  permitData?: PermitData | null;
 };
 
 type QuoteData = {
   message?: string;
   escrowAddress?: string;
   quoteResponse?: QuoteResponse;
-  approvalSpender?: string;
+  approval?: ApiTransaction | null;
+  cancel?: ApiTransaction | null;
   maximumAmount?: string;
-  needsApproval?: boolean;
 };
 
 type SwapData = {
@@ -98,24 +116,45 @@ type PaymentState =
   | "approving"
   | "building"
   | "swapping"
+  | "depositing"
   | "success"
   | "error";
 
 type UniswapPayButtonProps = {
   eventId: string;
   walletAddress: string;
+  escrowAddress: string;
+  onPaid: (paymentTxHash: Hex) => void;
 };
 
 export function UniswapPayButton({
   eventId,
   walletAddress,
+  escrowAddress,
+  onPaid,
 }: UniswapPayButtonProps) {
   const { getAccessToken } = usePrivy();
   const getWalletClient = useKosmosWalletClient();
+  const { connectWallet } = useConnectWallet();
+
+  async function getRequiredWalletClient() {
+    try {
+      return await getWalletClient(walletAddress);
+    } catch {
+      await connectWallet({
+        walletChainType: "ethereum-only",
+        description: "Connect the wallet linked to your Kosmos account",
+      });
+
+      return getWalletClient(walletAddress);
+    }
+  }
 
   const [state, setState] = useState<PaymentState>("idle");
   const [quoteData, setQuoteData] = useState<QuoteData | null>(null);
   const [paymentTxHash, setPaymentTxHash] = useState<Hex | null>(null);
+  const [pendingDepositAmount, setPendingDepositAmount] =
+    useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function fetchQuote(updateUi = true): Promise<QuoteData> {
@@ -152,45 +191,24 @@ export function UniswapPayButton({
       throw new Error("Uniswap returned an invalid quote");
     }
 
-    if (
-      !data.approvalSpender ||
-      !isAddress(data.approvalSpender) ||
-      data.approvalSpender.toLowerCase() !==
-        UNISWAP_PROXY.toLowerCase() ||
-      !data.maximumAmount
-    ) {
+    if (!data.maximumAmount) {
       throw new Error("Uniswap approval details are invalid");
     }
 
-    let requiredAmount: bigint;
-
     try {
-      requiredAmount = BigInt(data.maximumAmount);
+      if (BigInt(data.maximumAmount) <= BigInt(0)) {
+        throw new Error();
+      }
     } catch {
       throw new Error("Uniswap returned an invalid maximum input amount");
     }
 
-    const allowance = await publicClient.readContract({
-      address: SEPOLIA_USDC,
-      abi: ERC20_ABI,
-      functionName: "allowance",
-      args: [
-        walletAddress as Address,
-        data.approvalSpender as Address,
-      ],
-    });
-
-    const checkedData: QuoteData = {
-      ...data,
-      needsApproval: allowance < requiredAmount,
-    };
-
     if (updateUi) {
-      setQuoteData(checkedData);
+      setQuoteData(data);
       setState("ready");
     }
 
-    return checkedData;
+    return data;
   }
 
   async function sendApiTransaction(
@@ -220,7 +238,7 @@ export function UniswapPayButton({
       throw new Error("Transaction is not for Sepolia");
     }
 
-    const walletClient = await getWalletClient(walletAddress);
+    const walletClient = await getRequiredWalletClient();
     const chainId = await walletClient.getChainId();
 
     if (chainId !== sepolia.id) {
@@ -252,45 +270,224 @@ export function UniswapPayButton({
     return hash;
   }
 
-  async function approveCurrentProxy(
-    data: QuoteData
-  ): Promise<void> {
+  function validatePermit2ApprovalTransaction(
+    transaction: ApiTransaction,
+    expectedAmount: "zero" | "positive"
+  ) {
     if (
-      !data.approvalSpender ||
-      !isAddress(data.approvalSpender) ||
-      data.approvalSpender.toLowerCase() !==
-        UNISWAP_PROXY.toLowerCase() ||
-      !data.maximumAmount
+      !transaction.to ||
+      transaction.to.toLowerCase() !== SEPOLIA_USDC.toLowerCase() ||
+      !transaction.data ||
+      !isHex(transaction.data)
     ) {
-      throw new Error("Uniswap approval details are invalid");
+      throw new Error("Invalid Permit2 approval transaction");
     }
 
-    let amount: bigint;
+    let decoded;
 
     try {
-      amount = BigInt(data.maximumAmount);
+      decoded = decodeFunctionData({
+        abi: ERC20_ABI,
+        data: transaction.data as Hex,
+      });
     } catch {
-      throw new Error("Uniswap returned an invalid approval amount");
+      throw new Error("Invalid Permit2 approval calldata");
     }
 
-    const approvalData = encodeFunctionData({
-      abi: ERC20_ABI,
-      functionName: "approve",
-      args: [
-        data.approvalSpender as Address,
-        amount,
-      ],
-    });
+    if (decoded.functionName !== "approve") {
+      throw new Error("Unexpected Permit2 approval function");
+    }
+
+    const [spender, amount] = decoded.args;
+
+    if (
+      spender.toLowerCase() !== PERMIT2_ADDRESS.toLowerCase()
+    ) {
+      throw new Error("Approval spender is not Permit2");
+    }
+
+    if (
+      (expectedAmount === "zero" && amount !== BigInt(0)) ||
+      (expectedAmount === "positive" && amount <= BigInt(0))
+    ) {
+      throw new Error("Unexpected Permit2 approval amount");
+    }
+  }
+
+  async function executePermit2Approvals(data: QuoteData) {
+    if (!data.cancel && !data.approval) {
+      return;
+    }
 
     setState("approving");
 
-    await sendApiTransaction({
-      to: SEPOLIA_USDC,
-      from: walletAddress,
-      data: approvalData,
-      value: "0",
-      chainId: sepolia.id,
+    if (data.cancel) {
+      validatePermit2ApprovalTransaction(data.cancel, "zero");
+      await sendApiTransaction(data.cancel);
+    }
+
+    if (data.approval) {
+      validatePermit2ApprovalTransaction(data.approval, "positive");
+      await sendApiTransaction(data.approval);
+    }
+  }
+
+  async function signPermit2(
+    permitData: PermitData,
+    quotedInputAmount: string,
+    maximumAmount: string
+  ): Promise<Hex> {
+    const { domain, types, values } = permitData;
+    const details = values?.details;
+
+    if (
+      domain?.name !== "Permit2" ||
+      domain.chainId !== sepolia.id ||
+      !domain.verifyingContract ||
+      !isAddress(domain.verifyingContract) ||
+      domain.verifyingContract.toLowerCase() !==
+        PERMIT2_ADDRESS.toLowerCase() ||
+      !types?.PermitSingle ||
+      !types.PermitDetails ||
+      !details ||
+      !details.token ||
+      !isAddress(details.token) ||
+      details.token.toLowerCase() !== SEPOLIA_USDC.toLowerCase() ||
+      !values?.spender ||
+      !isAddress(values.spender) ||
+      !details.amount ||
+      !details.expiration ||
+      !details.nonce ||
+      !values.sigDeadline
+    ) {
+      throw new Error("Uniswap returned invalid Permit2 data");
+    }
+
+    let amount: bigint;
+    let expiration: bigint;
+    let nonce: bigint;
+    let sigDeadline: bigint;
+    let expectedInput: bigint;
+    let expectedMaximum: bigint;
+
+    try {
+      amount = BigInt(details.amount);
+      expiration = BigInt(details.expiration);
+      nonce = BigInt(details.nonce);
+      sigDeadline = BigInt(values.sigDeadline);
+      expectedInput = BigInt(quotedInputAmount);
+      expectedMaximum = BigInt(maximumAmount);
+    } catch {
+      throw new Error("Uniswap returned invalid Permit2 values");
+    }
+
+    if (amount !== expectedInput) {
+      throw new Error(
+        "Permit2 amount does not match the latest quote input"
+      );
+    }
+
+    if (amount > expectedMaximum) {
+      throw new Error(
+        "Permit2 amount exceeds the latest quote maximum"
+      );
+    }
+
+    const walletClient = await getRequiredWalletClient();
+    const chainId = await walletClient.getChainId();
+
+    if (chainId !== sepolia.id) {
+      throw new Error("Switch your wallet to Sepolia and try again");
+    }
+
+    return walletClient.signTypedData({
+      account: walletAddress as Address,
+      domain: {
+        name: domain.name,
+        ...(domain.version
+          ? { version: domain.version }
+          : {}),
+        chainId: domain.chainId,
+        verifyingContract:
+          domain.verifyingContract as Address,
+      },
+      types,
+      primaryType: "PermitSingle",
+      message: {
+        details: {
+          token: details.token as Address,
+          amount,
+          expiration,
+          nonce,
+        },
+        spender: values.spender as Address,
+        sigDeadline,
+      },
     });
+  }
+
+  async function depositToEscrow(outputAmount: string) {
+    if (!isAddress(escrowAddress)) {
+      throw new Error("Event escrow address is invalid");
+    }
+
+    setState("depositing");
+    setError(null);
+
+    const walletClient = await getRequiredWalletClient();
+
+    const estimatedDepositGas =
+      await publicClient.estimateContractGas({
+        address: escrowAddress as Address,
+        abi: EventEscrowAbi,
+        functionName: "deposit",
+        args: [walletAddress as Address],
+        account: walletAddress as Address,
+        value: BigInt(outputAmount),
+      });
+
+    const depositGas =
+      (estimatedDepositGas * BigInt(120)) / BigInt(100);
+
+    const depositHash = await walletClient.writeContract({
+      address: escrowAddress as Address,
+      abi: EventEscrowAbi,
+      functionName: "deposit",
+      args: [walletAddress as Address],
+      value: BigInt(outputAmount),
+      gas: depositGas,
+    });
+
+    const depositReceipt =
+      await publicClient.waitForTransactionReceipt({
+        hash: depositHash,
+      });
+
+    if (depositReceipt.status !== "success") {
+      throw new Error("Escrow deposit reverted");
+    }
+
+    setPaymentTxHash(depositHash);
+    setPendingDepositAmount(null);
+    onPaid(depositHash);
+    setState("success");
+  }
+
+  async function retryDeposit() {
+    if (!pendingDepositAmount) {
+      return;
+    }
+
+    try {
+      await depositToEscrow(pendingDepositAmount);
+    } catch (depositError) {
+      setError(
+        depositError instanceof Error
+          ? depositError.message
+          : "Escrow deposit failed"
+      );
+      setState("error");
+    }
   }
 
   async function handlePayment() {
@@ -299,32 +496,41 @@ export function UniswapPayButton({
     setError(null);
 
     try {
-      if (quoteData.needsApproval) {
-        await approveCurrentProxy(quoteData);
-      }
+      await executePermit2Approvals(quoteData);
 
-      // Approval changes on-chain state and quotes age quickly.
-      // Always obtain a fresh quote before building the swap.
+      // Always sign the freshest quote. Permit2 signatures are tied
+      // to the exact quote submitted to /swap.
       setState("building");
-      let freshQuote = await fetchQuote(false);
+      const freshQuote = await fetchQuote(false);
 
-      // Exact-output maximum input can move between quotes.
-      // If necessary, approve the latest maximum and quote once more.
-      if (freshQuote.needsApproval) {
-        await approveCurrentProxy(freshQuote);
-
-        setState("building");
-        freshQuote = await fetchQuote(false);
-      }
-
-      if (freshQuote.needsApproval) {
+      if (freshQuote.cancel || freshQuote.approval) {
         throw new Error(
-          "USDC allowance is still below the latest quote maximum"
+          "Permit2 approval is still required after confirmation"
         );
       }
 
-      if (!freshQuote.quoteResponse) {
+      const quotedInputAmount =
+        freshQuote.quoteResponse?.quote?.input?.amount;
+
+      if (
+        !freshQuote.quoteResponse ||
+        !freshQuote.maximumAmount ||
+        !quotedInputAmount
+      ) {
         throw new Error("Fresh Uniswap quote is missing");
+      }
+
+      const permitData =
+        freshQuote.quoteResponse.permitData ?? null;
+
+      let signature: Hex | undefined;
+
+      if (permitData) {
+        signature = await signPermit2(
+          permitData,
+          quotedInputAmount,
+          freshQuote.maximumAmount
+        );
       }
 
       const token = await getAccessToken();
@@ -342,6 +548,7 @@ export function UniswapPayButton({
         body: JSON.stringify({
           eventId,
           quoteResponse: freshQuote.quoteResponse,
+          ...(signature ? { signature } : {}),
         }),
       });
 
@@ -358,11 +565,19 @@ export function UniswapPayButton({
       }
 
       setState("swapping");
-      const hash = await sendApiTransaction(swapData.swap);
+      await sendApiTransaction(swapData.swap);
+
+      const outputAmount =
+        freshQuote.quoteResponse.quote?.output?.amount;
+
+      if (!outputAmount || BigInt(outputAmount) <= BigInt(0)) {
+        throw new Error("Swap output amount is invalid");
+      }
 
       setQuoteData(freshQuote);
-      setPaymentTxHash(hash);
-      setState("success");
+      setPendingDepositAmount(outputAmount);
+
+      await depositToEscrow(outputAmount);
     } catch (paymentError) {
       const message =
         paymentError instanceof Error
@@ -373,7 +588,6 @@ export function UniswapPayButton({
       setState("error");
     }
   }
-
 
 
   const inputAmount = quoteData?.quoteResponse?.quote?.input?.amount;
@@ -429,7 +643,7 @@ export function UniswapPayButton({
           )}
 
           <p className="mt-1 text-xs text-muted-foreground">
-            ETH is sent directly to the event escrow.
+            ETH is swapped to your wallet, then deposited into the event escrow.
           </p>
 
           <Button
@@ -438,19 +652,31 @@ export function UniswapPayButton({
             disabled={
               state === "approving" ||
               state === "building" ||
-              state === "swapping"
+              state === "swapping" ||
+              state === "depositing"
             }
-            onClick={handlePayment}
+            onClick={
+              pendingDepositAmount
+                ? retryDeposit
+                : handlePayment
+            }
           >
             {state === "approving"
               ? "Approve USDC in wallet..."
               : state === "building"
                 ? "Preparing payment..."
                 : state === "swapping"
-                  ? "Confirm payment in wallet..."
-                  : quoteData.needsApproval
-                    ? "Approve USDC & pay"
-                    : "Pay with USDC"}
+                  ? "Confirm swap in wallet..."
+                  : state === "depositing"
+                    ? "Deposit ETH in escrow..."
+                    : pendingDepositAmount
+                      ? "Retry deposit"
+                      : Boolean(
+                          quoteData.cancel ||
+                          quoteData.approval
+                        )
+                        ? "Approve USDC & pay"
+                        : "Pay with USDC"}
           </Button>
         </div>
       )}
@@ -458,7 +684,7 @@ export function UniswapPayButton({
       {state === "success" && paymentTxHash && (
         <div>
           <p className="text-sm font-medium text-foreground">
-            Payment sent to event escrow
+            Payment deposited into event escrow
           </p>
           <p className="mt-1 break-all text-xs text-muted-foreground">
             {paymentTxHash}

@@ -21,7 +21,6 @@ async function uniswapFetch(path: string, body: unknown) {
     headers: {
       "x-api-key": apiKey,
       "x-universal-router-version": "2.0",
-      "x-permit2-disabled": "true",
       "content-type": "application/json",
       accept: "application/json",
     },
@@ -49,6 +48,19 @@ async function uniswapFetch(path: string, body: unknown) {
   return data;
 }
 
+export function checkApproval(params: {
+  walletAddress: string;
+  token: string;
+  amount: string;
+}) {
+  return uniswapFetch("/check_approval", {
+    walletAddress: params.walletAddress,
+    token: params.token,
+    amount: params.amount,
+    chainId: SEPOLIA_CHAIN_ID,
+  });
+}
+
 export function getQuote(params: {
   tokenIn: string;
   swapper: string;
@@ -65,14 +77,22 @@ export function getQuote(params: {
     amount: params.amount,
     swapper: params.swapper,
     recipient: params.recipient,
+    permitAmount: "EXACT",
     autoSlippage: "DEFAULT",
     protocols: ["V2", "V3", "V4"],
   });
 }
 
-export function buildSwap(quote: Record<string, unknown>) {
+export function buildSwap(
+  quote: Record<string, unknown>,
+  permitData?: Record<string, unknown> | null,
+  signature?: string
+) {
   return uniswapFetch("/swap", {
     quote,
+    ...(permitData && signature
+      ? { permitData, signature }
+      : {}),
     simulateTransaction: true,
   });
 }
