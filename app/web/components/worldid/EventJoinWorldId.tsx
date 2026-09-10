@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePrivy, type User } from "@privy-io/react-auth";
 import type { IDKitResult } from "@worldcoin/idkit";
 
+import { CancelJoinButton } from "@/components/join/CancelJoinButton";
 import { UniswapPayButton } from "@/components/join/UniswapPayButton";
 import { Button } from "@/components/ui/Button";
 import { SelfieCheckButton } from "@/components/worldid/SelfieCheckButton";
@@ -22,6 +23,7 @@ type ExistingJoinStatus =
   | "pending"
   | "approved"
   | "denied"
+  | "cancelled"
   | null;
 
 function isExternalEthereumWallet(
@@ -41,11 +43,13 @@ export function EventJoinWorldId({
   price,
   escrowAddress,
   hostWalletAddress,
+  startsAt,
 }: {
   eventId: string;
   price: string;
   escrowAddress: string | null;
   hostWalletAddress: string | null;
+  startsAt: string | Date;
 }) {
   const {
     ready,
@@ -65,6 +69,8 @@ export function EventJoinWorldId({
   const [error, setError] = useState<string | null>(null);
   const [existingJoinStatus, setExistingJoinStatus] =
     useState<ExistingJoinStatus | undefined>(undefined);
+  const [joinRequestId, setJoinRequestId] =
+    useState<string | null>(null);
   const [statusError, setStatusError] =
     useState<string | null>(null);
 
@@ -132,13 +138,19 @@ export function EventJoinWorldId({
           status !== null &&
           status !== "pending" &&
           status !== "approved" &&
-          status !== "denied"
+          status !== "denied" &&
+          status !== "cancelled"
         ) {
           throw new Error("Invalid join status");
         }
 
         if (!cancelled) {
           setExistingJoinStatus(status);
+          setJoinRequestId(
+            typeof body?.requestId === "string"
+              ? body.requestId
+              : null
+          );
         }
       } catch (statusLoadError) {
         if (!cancelled) {
@@ -205,8 +217,19 @@ export function EventJoinWorldId({
         );
       }
 
-      setExistingJoinStatus("pending");
-      setJoinState("pending");
+      if (body?.status === "approved") {
+        setJoinRequestId(
+          typeof body?.id === "string" ? body.id : null
+        );
+        setExistingJoinStatus("approved");
+        setJoinState("idle");
+      } else {
+        setJoinRequestId(
+          typeof body?.id === "string" ? body.id : null
+        );
+        setExistingJoinStatus("pending");
+        setJoinState("pending");
+      }
     } catch (joinError) {
       setError(
         joinError instanceof Error
@@ -298,6 +321,10 @@ export function EventJoinWorldId({
   }
 
   if (existingJoinStatus === "approved") {
+    const canCancel =
+      joinRequestId &&
+      new Date(startsAt) > new Date();
+
     return (
       <div>
         <p className="font-medium text-foreground">
@@ -305,6 +332,33 @@ export function EventJoinWorldId({
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
           Your ticket for this event is confirmed.
+        </p>
+
+        {canCancel && (
+          <div className="mt-4 border-t border-border pt-4">
+            <CancelJoinButton
+              joinRequestId={joinRequestId}
+              escrowAddress={escrowAddress}
+              attendeeWalletAddress={externalWalletAddress ?? null}
+              price={price}
+              onCancelled={() => {
+                setExistingJoinStatus("cancelled");
+              }}
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (existingJoinStatus === "cancelled" && isPaid) {
+    return (
+      <div>
+        <p className="font-medium text-foreground">
+          Cancelled
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Your spot for this event was cancelled and refunded.
         </p>
       </div>
     );

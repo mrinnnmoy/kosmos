@@ -124,6 +124,7 @@ export default async function EventDetailPage({
               price={event.price}
               escrowAddress={event.escrowContractAddress}
               hostWalletAddress={host?.linkedWallet ?? null}
+              startsAt={event.startsAt}
             />
 
             {(event.requiresApproval || Number(event.price) > 0) && (

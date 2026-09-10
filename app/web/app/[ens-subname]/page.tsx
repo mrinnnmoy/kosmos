@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -26,7 +26,12 @@ export default async function UserDashboardPage({
   const hostedEvents = await db
     .select()
     .from(events)
-    .where(eq(events.hostId, profile.id));
+    .where(
+      and(
+        eq(events.hostId, profile.id),
+        ne(events.status, "draft")
+      )
+    );
 
   const joinedRows = await db
     .select({ event: events })
@@ -91,7 +96,7 @@ export default async function UserDashboardPage({
 
         {joinedRows.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground">
-            No joined events yet — the join flow lands in Commit 17.
+            No joined events yet.
           </p>
         ) : (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">

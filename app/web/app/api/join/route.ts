@@ -19,7 +19,10 @@ import {
 import { getVerifiedPrivyUser } from "@/lib/auth/verify-privy-token";
 import { db } from "@/lib/db";
 import { events, joinRequests, users } from "@/lib/db/schema";
-import { sendPaymentConfirmationEmail } from "@/lib/email/notifications";
+import {
+  sendPaymentConfirmationEmail,
+  sendQRTicketEmail,
+} from "@/lib/email/notifications";
 import { verifyWorldIdProof } from "@/lib/worldid/verify";
 
 const WORLD_ACTION = "join-kosmos-event";
@@ -186,6 +189,19 @@ export async function POST(request: Request) {
     );
   }
 
+  let expectedAmount: bigint;
+
+  try {
+    expectedAmount = parseEther(event.price);
+  } catch {
+    return NextResponse.json(
+      { message: "Invalid event price" },
+      { status: 500 }
+    );
+  }
+
+  const isPaid = expectedAmount > BigInt(0);
+
   const [existingForUser] = await db
     .select()
     .from(joinRequests)
@@ -198,10 +214,22 @@ export async function POST(request: Request) {
     .limit(1);
 
   if (existingForUser) {
-    return NextResponse.json(
-      { message: "You have already requested to join this event" },
-      { status: 409 }
-    );
+    if (existingForUser.status !== "cancelled") {
+      return NextResponse.json(
+        { message: "You have already requested to join this event" },
+        { status: 409 }
+      );
+    }
+
+    if (isPaid) {
+      return NextResponse.json(
+        {
+          message:
+            "Paid events cannot be rejoined after cancellation with this escrow",
+        },
+        { status: 409 }
+      );
+    }
   }
 
   const [existingNullifier] = await db
@@ -218,25 +246,15 @@ export async function POST(request: Request) {
     )
     .limit(1);
 
-  if (existingNullifier) {
+  if (
+    existingNullifier &&
+    existingNullifier.id !== existingForUser?.id
+  ) {
     return NextResponse.json(
       { message: "This person has already requested to join this event" },
       { status: 409 }
     );
   }
-
-  let expectedAmount: bigint;
-
-  try {
-    expectedAmount = parseEther(event.price);
-  } catch {
-    return NextResponse.json(
-      { message: "Invalid event price" },
-      { status: 500 }
-    );
-  }
-
-  const isPaid = expectedAmount > BigInt(0);
   let verifiedPaymentTxHash: string | null = null;
 
   if (isPaid) {
@@ -342,16 +360,65 @@ export async function POST(request: Request) {
     verifiedPaymentTxHash = paymentTxHash.toLowerCase();
   }
 
-  const [created] = await db
-    .insert(joinRequests)
-    .values({
-      eventId,
-      userId: attendee.id,
-      status: "pending",
-      paymentTxHash: verifiedPaymentTxHash,
-      selfieCheckNullifier: canonicalNullifier,
-    })
-    .returning();
+  const [created] = existingForUser
+    ? await db
+        .update(joinRequests)
+        .set({
+          status: "pending",
+          paymentTxHash: verifiedPaymentTxHash,
+          selfieCheckNullifier: canonicalNullifier,
+          ticketId: null,
+        })
+        .where(eq(joinRequests.id, existingForUser.id))
+        .returning()
+    : await db
+        .insert(joinRequests)
+        .values({
+          eventId,
+          userId: attendee.id,
+          status: "pending",
+          paymentTxHash: verifiedPaymentTxHash,
+          selfieCheckNullifier: canonicalNullifier,
+        })
+        .returning();
+
+  let finalJoinRequest = created;
+
+  if (!isPaid && !event.requiresApproval) {
+    const [approved] = await db
+      .update(joinRequests)
+      .set({
+        status: "approved",
+        ticketId: created.id,
+      })
+      .where(eq(joinRequests.id, created.id))
+      .returning();
+
+    if (!approved) {
+      return NextResponse.json(
+        { message: "Failed to confirm join request" },
+        { status: 500 }
+      );
+    }
+
+    finalJoinRequest = approved;
+
+    try {
+      await sendQRTicketEmail({
+        to: attendee.email,
+        attendeeName:
+          [attendee.firstName, attendee.lastName]
+            .filter(Boolean)
+            .join(" ") || attendee.email,
+        eventName: event.name,
+        eventDate: event.startsAt.toISOString(),
+        eventLocation: event.location ?? "TBA",
+        ticketId: created.id,
+      });
+    } catch (error) {
+      console.error("Failed to send QR ticket email", error);
+    }
+  }
 
   if (isPaid) {
     try {
@@ -378,5 +445,5 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json(created, { status: 201 });
+  return NextResponse.json(finalJoinRequest, { status: 201 });
 }

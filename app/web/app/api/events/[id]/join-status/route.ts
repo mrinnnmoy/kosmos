@@ -43,6 +43,7 @@ export async function GET(
 
   const [joinRequest] = await db
     .select({
+      id: joinRequests.id,
       status: joinRequests.status,
       ticketId: joinRequests.ticketId,
     })
@@ -56,6 +57,7 @@ export async function GET(
     .limit(1);
 
   return NextResponse.json({
+    requestId: joinRequest?.id ?? null,
     status: joinRequest?.status ?? null,
     ticketId: joinRequest?.ticketId ?? null,
   });
