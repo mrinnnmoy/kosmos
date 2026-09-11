@@ -11,6 +11,11 @@ export async function uploadToIPFS(file: File): Promise<string> {
   return upload.cid;
 }
 
+export async function uploadJSONToIPFS(data: object): Promise<string> {
+  const upload = await pinata.upload.public.json(data);
+  return upload.cid;
+}
+
 export function ipfsUrl(cid: string): string {
   return `https://${process.env.PINATA_GATEWAY ?? "gateway.pinata.cloud"}/ipfs/${cid}`;
 }
