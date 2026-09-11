@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -34,13 +34,16 @@ export default async function UserDashboardPage({
     );
 
   const joinedRows = await db
-    .select({ event: events })
+    .select({
+      event: events,
+      joinStatus: joinRequests.status,
+    })
     .from(joinRequests)
     .innerJoin(events, eq(joinRequests.eventId, events.id))
     .where(
       and(
         eq(joinRequests.userId, profile.id),
-        eq(joinRequests.status, "approved")
+        inArray(joinRequests.status, ["approved", "checked_in"])
       )
     );
 
@@ -100,8 +103,23 @@ export default async function UserDashboardPage({
           </p>
         ) : (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            {joinedRows.map(({ event }) => (
-              <EventCard key={event.id} event={event} />
+            {joinedRows.map(({ event, joinStatus }) => (
+              <EventCard
+                key={event.id}
+                event={event}
+                footer={
+                  joinStatus === "checked_in" && event.status === "ended" ? (
+                    <a
+                      href="https://sepolia.etherscan.io/token/0xc85365cEd1A610575002E4a3d22188882665AdA7"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex w-full items-center justify-center rounded-lg border border-border px-4 py-2 text-sm font-medium transition hover:border-primary hover:text-primary"
+                    >
+                      View Attendance NFT
+                    </a>
+                  ) : undefined
+                }
+              />
             ))}
           </div>
         )}

@@ -112,6 +112,11 @@ export default function ManageEventPage() {
   const [actionError, setActionError] =
     useState<string | null>(null);
   const [startingEvent, setStartingEvent] = useState(false);
+  const [endingEvent, setEndingEvent] = useState(false);
+  const [endTxHashes, setEndTxHashes] = useState<{
+    payout?: Hex;
+    mint?: Hex;
+  }>({});
 
   const [completedTxHashes, setCompletedTxHashes] =
     useState<Record<string, Hex>>({});
@@ -255,6 +260,257 @@ export default function ManageEventPage() {
       );
     } finally {
       setStartingEvent(false);
+    }
+  }
+
+  async function endEvent() {
+    if (!queue?.event.escrowContractAddress) {
+      setActionError("Event escrow contract is not configured");
+      return;
+    }
+
+    if (!externalEthereumWallet) {
+      setActionError(
+        "Connect the external wallet linked to your Kosmos account"
+      );
+      return;
+    }
+
+    if (!isAddress(queue.event.escrowContractAddress)) {
+      setActionError("Invalid event escrow contract address");
+      return;
+    }
+
+    setEndingEvent(true);
+    setActionError(null);
+
+    try {
+      const token = await getAccessToken();
+
+      if (!token) {
+        throw new Error("Unable to get authentication token");
+      }
+
+      const prepResponse = await fetch(
+        `/api/events/${eventId}/end`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const prep = await prepResponse.json().catch(() => null);
+
+      if (!prepResponse.ok) {
+        throw new Error(
+          prep?.message ?? "Failed to prepare event ending"
+        );
+      }
+
+      const payoutWallets = prep?.payoutWallets;
+      const mintWallets = prep?.mintWallets;
+      const metadataCid = prep?.metadataCid;
+
+      if (
+        !Array.isArray(payoutWallets) ||
+        !Array.isArray(mintWallets) ||
+        typeof metadataCid !== "string" ||
+        !metadataCid
+      ) {
+        throw new Error("Invalid end-event preparation response");
+      }
+
+      if (
+        !payoutWallets.every(
+          (wallet): wallet is Address =>
+            typeof wallet === "string" && isAddress(wallet)
+        ) ||
+        !mintWallets.every(
+          (wallet): wallet is Address =>
+            typeof wallet === "string" && isAddress(wallet)
+        )
+      ) {
+        throw new Error("Invalid attendee wallet list");
+      }
+
+      let walletClient;
+
+      try {
+        walletClient = await getWalletClient(
+          externalEthereumWallet.address
+        );
+      } catch {
+        await connectWallet({
+          walletChainType: "ethereum-only",
+          description:
+            "Connect the wallet linked to your Kosmos account",
+        });
+
+        walletClient = await getWalletClient(
+          externalEthereumWallet.address
+        );
+      }
+
+      const contractAddress =
+        queue.event.escrowContractAddress as Address;
+
+      const alreadyEnded = await publicClient.readContract({
+        address: contractAddress,
+        abi: EventEscrowAbi,
+        functionName: "eventEnded",
+      });
+
+      if (
+        alreadyEnded &&
+        (!endTxHashes.payout || !endTxHashes.mint)
+      ) {
+        throw new Error(
+          "This event is already ended on-chain but finalization is incomplete. Do not retry blockchain transactions."
+        );
+      }
+
+      if (!alreadyEnded) {
+        const endGasEstimate =
+          await publicClient.estimateContractGas({
+            address: contractAddress,
+            abi: EventEscrowAbi,
+            functionName: "endEvent",
+            account:
+              externalEthereumWallet.address as Address,
+          });
+
+        const endHash = await walletClient.writeContract({
+          address: contractAddress,
+          abi: EventEscrowAbi,
+          functionName: "endEvent",
+          gas:
+            (endGasEstimate * BigInt(120)) /
+            BigInt(100),
+        });
+
+        const endReceipt =
+          await publicClient.waitForTransactionReceipt({
+            hash: endHash,
+          });
+
+        if (endReceipt.status !== "success") {
+          throw new Error("Failed to end event on-chain");
+        }
+      }
+
+      let payoutHash = endTxHashes.payout;
+
+      if (!payoutHash) {
+        const payoutGasEstimate =
+          await publicClient.estimateContractGas({
+            address: contractAddress,
+            abi: EventEscrowAbi,
+            functionName: "batchPayout",
+            args: [payoutWallets],
+            account:
+              externalEthereumWallet.address as Address,
+          });
+
+        payoutHash = await walletClient.writeContract({
+          address: contractAddress,
+          abi: EventEscrowAbi,
+          functionName: "batchPayout",
+          args: [payoutWallets],
+          gas:
+            (payoutGasEstimate * BigInt(120)) /
+            BigInt(100),
+        });
+
+        const payoutReceipt =
+          await publicClient.waitForTransactionReceipt({
+            hash: payoutHash,
+          });
+
+        if (payoutReceipt.status !== "success") {
+          throw new Error("Host payout transaction failed");
+        }
+
+        setEndTxHashes((current) => ({
+          ...current,
+          payout: payoutHash,
+        }));
+      }
+
+      let mintHash = endTxHashes.mint;
+
+      if (!mintHash) {
+        const mintGasEstimate =
+          await publicClient.estimateContractGas({
+            address: contractAddress,
+            abi: EventEscrowAbi,
+            functionName: "mintTickets",
+            args: [mintWallets, metadataCid],
+            account:
+              externalEthereumWallet.address as Address,
+          });
+
+        mintHash = await walletClient.writeContract({
+          address: contractAddress,
+          abi: EventEscrowAbi,
+          functionName: "mintTickets",
+          args: [mintWallets, metadataCid],
+          gas:
+            (mintGasEstimate * BigInt(120)) /
+            BigInt(100),
+        });
+
+        const mintReceipt =
+          await publicClient.waitForTransactionReceipt({
+            hash: mintHash,
+          });
+
+        if (mintReceipt.status !== "success") {
+          throw new Error("Ticket NFT mint transaction failed");
+        }
+
+        setEndTxHashes((current) => ({
+          ...current,
+          mint: mintHash,
+        }));
+      }
+
+      const finalizeResponse = await fetch(
+        `/api/events/${eventId}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            status: "ended",
+            payoutTxHash: payoutHash,
+            mintTxHash: mintHash,
+          }),
+        }
+      );
+
+      const finalize =
+        await finalizeResponse.json().catch(() => null);
+
+      if (!finalizeResponse.ok) {
+        throw new Error(
+          finalize?.message ?? "Failed to finalize event"
+        );
+      }
+
+      setEndTxHashes({});
+      await fetchQueue();
+    } catch (error) {
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Failed to end event"
+      );
+    } finally {
+      setEndingEvent(false);
     }
   }
 
@@ -520,11 +776,29 @@ export default function ManageEventPage() {
           )}
 
           {queue.event.status === "live" && (
-            <a href={`/events/${eventId}/checkin`}>
-              <Button type="button">
-                Open Check-in Scanner
+            <>
+              <a href={`/events/${eventId}/checkin`}>
+                <Button type="button">
+                  Open Check-in Scanner
+                </Button>
+              </a>
+
+              <Button
+                type="button"
+                onClick={() => void endEvent()}
+                disabled={endingEvent}
+              >
+                {endingEvent
+                  ? "Ending event..."
+                  : "End Event"}
               </Button>
-            </a>
+            </>
+          )}
+
+          {queue.event.status === "ended" && (
+            <p className="text-sm font-medium text-success">
+              Event ended
+            </p>
           )}
         </div>
       </div>

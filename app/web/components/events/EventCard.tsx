@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { ipfsUrl } from "@/lib/ipfs/upload";
@@ -9,7 +10,13 @@ type EventCardEvent = Omit<KosmosEvent, "startsAt" | "endsAt" | "createdAt"> & {
   createdAt: string | Date;
 };
 
-export function EventCard({ event }: { event: EventCardEvent }) {
+export function EventCard({
+  event,
+  footer,
+}: {
+  event: EventCardEvent;
+  footer?: ReactNode;
+}) {
   const date = new Date(event.startsAt).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
@@ -17,8 +24,8 @@ export function EventCard({ event }: { event: EventCardEvent }) {
   });
 
   return (
-    <Link href={`/discover/${event.id}`} className="group">
-      <div className="overflow-hidden rounded-xl border border-border bg-surface transition group-hover:border-primary">
+    <div className="overflow-hidden rounded-xl border border-border bg-surface transition hover:border-primary">
+      <Link href={`/discover/${event.id}`} className="group block">
         <div className="aspect-video w-full bg-border">
           {event.coverImageCid && (
             // eslint-disable-next-line @next/next/no-img-element
@@ -48,7 +55,13 @@ export function EventCard({ event }: { event: EventCardEvent }) {
             </span>
           </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+
+      {footer && (
+        <div className="border-t border-border p-3">
+          {footer}
+        </div>
+      )}
+    </div>
   );
 }

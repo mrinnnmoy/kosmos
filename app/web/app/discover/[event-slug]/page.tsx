@@ -1,8 +1,8 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { events, users } from "@/lib/db/schema";
+import { events, joinRequests, users } from "@/lib/db/schema";
 import { Badge } from "@/components/ui/Badge";
 import { EventJoinWorldId } from "@/components/worldid/EventJoinWorldId";
 import { ipfsUrl } from "@/lib/ipfs/upload";
@@ -21,6 +21,28 @@ export default async function EventDetailPage({
     .select()
     .from(users)
     .where(eq(users.id, event.hostId));
+
+  const attendees =
+    event.status === "ended"
+      ? await db
+          .select({
+            status: joinRequests.status,
+            attendee: {
+              firstName: users.firstName,
+              lastName: users.lastName,
+              ensSubname: users.ensSubname,
+              linkedWallet: users.linkedWallet,
+            },
+          })
+          .from(joinRequests)
+          .innerJoin(users, eq(joinRequests.userId, users.id))
+          .where(
+            and(
+              eq(joinRequests.eventId, event.id),
+              inArray(joinRequests.status, ["approved", "checked_in"])
+            )
+          )
+      : [];
 
   const startDate = new Date(event.startsAt);
 
@@ -118,21 +140,77 @@ export default async function EventDetailPage({
             )}
           </div>
 
-          <div className="mt-8 rounded-xl border border-border bg-surface p-5">
-            <EventJoinWorldId
-              eventId={event.id}
-              price={event.price}
-              escrowAddress={event.escrowContractAddress}
-              hostWalletAddress={host?.linkedWallet ?? null}
-              startsAt={event.startsAt}
-            />
+          {event.status === "ended" ? (
+            <div className="mt-8 rounded-xl border border-border bg-surface p-5">
+              <h2 className="font-heading text-lg font-semibold">
+                Event ended
+              </h2>
 
-            {(event.requiresApproval || Number(event.price) > 0) && (
-              <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                The host reviews every request before it&apos;s confirmed.
+              <p className="mt-1 text-sm text-muted-foreground">
+                Attendance has been finalized.
               </p>
-            )}
-          </div>
+
+              <div className="mt-5 border-t border-border pt-5">
+                <h3 className="text-sm font-semibold">Attendees</h3>
+
+                {attendees.length === 0 ? (
+                  <p className="mt-3 text-sm text-muted-foreground">
+                    No attendees.
+                  </p>
+                ) : (
+                  <div className="mt-3 space-y-3">
+                    {attendees.map(({ attendee, status }) => {
+                      const name =
+                        [attendee.firstName, attendee.lastName]
+                          .filter(Boolean)
+                          .join(" ") ||
+                        attendee.ensSubname ||
+                        "Attendee";
+
+                      return (
+                        <div
+                          key={attendee.linkedWallet ?? attendee.ensSubname ?? name}
+                          className="rounded-lg border border-border p-3"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="font-medium">{name}</p>
+
+                            <Badge>
+                              {status === "checked_in"
+                                ? "Checked in"
+                                : "No show"}
+                            </Badge>
+                          </div>
+
+                          {attendee.linkedWallet && (
+                            <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
+                              {attendee.linkedWallet}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="mt-8 rounded-xl border border-border bg-surface p-5">
+              <EventJoinWorldId
+                eventId={event.id}
+                price={event.price}
+                escrowAddress={event.escrowContractAddress}
+                hostWalletAddress={host?.linkedWallet ?? null}
+                startsAt={event.startsAt}
+              />
+
+              {(event.requiresApproval || Number(event.price) > 0) && (
+                <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+                  The host reviews every request before it&apos;s confirmed.
+                </p>
+              )}
+            </div>
+          )}
 
           {event.description && (
             <section className="mt-8 border-t border-border pt-7">
