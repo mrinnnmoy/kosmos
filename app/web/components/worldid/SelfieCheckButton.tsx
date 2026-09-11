@@ -1,5 +1,9 @@
 "use client";
 
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
+
+import { Spinner } from "@/components/ui/Spinner";
+
 import { usePrivy } from "@privy-io/react-auth";
 import { useRef, useState } from "react";
 import {
@@ -145,11 +149,19 @@ export function SelfieCheckButton({
         disabled={loading || !walletAddress}
         className="w-full cursor-pointer rounded-xl bg-white px-4 py-3 font-medium text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {loading ? "Preparing verification..." : "Join"}
+        <span
+          className="flex items-center justify-center gap-2"
+          aria-live="polite"
+        >
+          {loading && <Spinner />}
+          {loading ? "Preparing verification..." : "Join"}
+        </span>
       </button>
 
       {error ? (
-        <p className="mt-2 text-sm text-red-400">{error}</p>
+        <div className="mt-2">
+          <ErrorBanner message={error} />
+        </div>
       ) : null}
 
       {rpContext && appId ? (

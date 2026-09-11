@@ -1,5 +1,9 @@
 "use client";
 
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
+
+import { Spinner } from "@/components/ui/Spinner";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePrivy, type User } from "@privy-io/react-auth";
@@ -7,6 +11,7 @@ import type { IDKitResult } from "@worldcoin/idkit";
 
 import { CancelJoinButton } from "@/components/join/CancelJoinButton";
 import { UniswapPayButton } from "@/components/join/UniswapPayButton";
+import { TicketQrButton } from "@/components/tickets/TicketQrButton";
 import { Button } from "@/components/ui/Button";
 import { SelfieCheckButton } from "@/components/worldid/SelfieCheckButton";
 
@@ -22,6 +27,7 @@ type JoinState =
 type ExistingJoinStatus =
   | "pending"
   | "approved"
+  | "checked_in"
   | "denied"
   | "cancelled"
   | null;
@@ -44,12 +50,14 @@ export function EventJoinWorldId({
   escrowAddress,
   hostWalletAddress,
   startsAt,
+  eventName,
 }: {
   eventId: string;
   price: string;
   escrowAddress: string | null;
   hostWalletAddress: string | null;
   startsAt: string | Date;
+  eventName: string;
 }) {
   const {
     ready,
@@ -70,6 +78,8 @@ export function EventJoinWorldId({
   const [existingJoinStatus, setExistingJoinStatus] =
     useState<ExistingJoinStatus | undefined>(undefined);
   const [joinRequestId, setJoinRequestId] =
+    useState<string | null>(null);
+  const [ticketId, setTicketId] =
     useState<string | null>(null);
   const [statusError, setStatusError] =
     useState<string | null>(null);
@@ -138,6 +148,7 @@ export function EventJoinWorldId({
           status !== null &&
           status !== "pending" &&
           status !== "approved" &&
+          status !== "checked_in" &&
           status !== "denied" &&
           status !== "cancelled"
         ) {
@@ -149,6 +160,11 @@ export function EventJoinWorldId({
           setJoinRequestId(
             typeof body?.requestId === "string"
               ? body.requestId
+              : null
+          );
+          setTicketId(
+            typeof body?.ticketId === "string"
+              ? body.ticketId
               : null
           );
         }
@@ -221,6 +237,13 @@ export function EventJoinWorldId({
         setJoinRequestId(
           typeof body?.id === "string" ? body.id : null
         );
+        setTicketId(
+          typeof body?.ticketId === "string"
+            ? body.ticketId
+            : typeof body?.id === "string"
+              ? body.id
+              : null
+        );
         setExistingJoinStatus("approved");
         setJoinState("idle");
       } else {
@@ -288,9 +311,7 @@ export function EventJoinWorldId({
 
   if (statusError) {
     return (
-      <p className="text-sm text-danger">
-        {statusError}
-      </p>
+      <ErrorBanner message={statusError} />
     );
   }
 
@@ -301,7 +322,13 @@ export function EventJoinWorldId({
         className="w-full"
         disabled
       >
-        Checking join status...
+        <span
+          className="flex items-center justify-center gap-2"
+          aria-live="polite"
+        >
+          <Spinner />
+          Checking join status...
+        </span>
       </Button>
     );
   }
@@ -320,22 +347,41 @@ export function EventJoinWorldId({
     );
   }
 
-  if (existingJoinStatus === "approved") {
+  if (
+    existingJoinStatus === "approved" ||
+    existingJoinStatus === "checked_in"
+  ) {
+    const isCheckedIn = existingJoinStatus === "checked_in";
+
     const canCancel =
+      !isCheckedIn &&
       joinRequestId &&
       new Date(startsAt) > new Date();
 
     return (
       <div>
         <p className="font-medium text-foreground">
-          Approved
-        </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Your ticket for this event is confirmed.
+          {isCheckedIn ? "Checked in" : "Approved"}
         </p>
 
+        <p className="mt-1 text-sm text-muted-foreground">
+          {isCheckedIn
+            ? "You're checked in for this event."
+            : "Your ticket for this event is confirmed."}
+        </p>
+
+        {ticketId && (
+          <div className="mt-4">
+            <TicketQrButton
+              ticketId={ticketId}
+              eventName={eventName}
+              checkedIn={isCheckedIn}
+            />
+          </div>
+        )}
+
         {canCancel && (
-          <div className="mt-4 border-t border-border pt-4">
+          <div className="mt-4">
             <CancelJoinButton
               joinRequestId={joinRequestId}
               escrowAddress={escrowAddress}
@@ -343,6 +389,7 @@ export function EventJoinWorldId({
               price={price}
               onCancelled={() => {
                 setExistingJoinStatus("cancelled");
+                setTicketId(null);
               }}
             />
           </div>
@@ -398,7 +445,13 @@ export function EventJoinWorldId({
         className="w-full"
         disabled
       >
-        Submitting join request...
+        <span
+          className="flex items-center justify-center gap-2"
+          aria-live="polite"
+        >
+          <Spinner />
+          Submitting join request...
+        </span>
       </Button>
     );
   }
@@ -406,7 +459,7 @@ export function EventJoinWorldId({
   if (joinState === "error") {
     return (
       <div>
-        <p className="text-sm text-danger">{error}</p>
+        <ErrorBanner message={error ?? "Failed to submit join request."} />
 
         <Button
           type="button"
@@ -465,9 +518,7 @@ export function EventJoinWorldId({
 
   if (!escrowAddress) {
     return (
-      <p className="text-sm text-danger">
-        Event escrow is not available.
-      </p>
+      <ErrorBanner message="Event escrow is not available." />
     );
   }
 

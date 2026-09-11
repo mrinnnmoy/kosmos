@@ -7,6 +7,7 @@ import { usePrivy } from "@privy-io/react-auth";
 import { CalendarPlus, Compass } from "lucide-react";
 
 import { Card } from "@/components/ui/Card";
+import { Spinner } from "@/components/ui/Spinner";
 
 export default function HomePage() {
   const router = useRouter();
@@ -21,7 +22,10 @@ export default function HomePage() {
   if (!ready || !authenticated) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background px-6">
-        <p className="text-muted-foreground">Loading...</p>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Spinner />
+          <span>Loading...</span>
+        </div>
       </main>
     );
   }

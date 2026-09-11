@@ -1,5 +1,7 @@
 "use client";
 
+import { Spinner } from "@/components/ui/Spinner";
+
 import { usePrivy } from "@privy-io/react-auth";
 import Link from "next/link";
 
@@ -40,7 +42,13 @@ export function Navbar() {
           ) : (
             <Button asChild size="sm">
               <Link href="/signin">
-                {ready ? "Sign In" : "Loading..."}
+                <span
+                  className="flex items-center gap-2"
+                  aria-live="polite"
+                >
+                  {!ready && <Spinner />}
+                  {ready ? "Sign In" : "Loading..."}
+                </span>
               </Link>
             </Button>
           )}

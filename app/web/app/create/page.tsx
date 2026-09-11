@@ -20,6 +20,8 @@ import {
 import { useKosmosWalletClient } from "@/hooks/useWalletClient";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { Spinner } from "@/components/ui/Spinner";
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
 
 type LinkedAccount = User["linkedAccounts"][number];
 type WalletAccount = Extract<LinkedAccount, { type: "wallet" }>;
@@ -218,7 +220,10 @@ export default function CreateEventPage() {
   if (!ready || !authenticated) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background px-6">
-        <p className="text-muted-foreground">Loading...</p>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Spinner />
+          <span>Loading...</span>
+        </div>
       </main>
     );
   }
@@ -229,8 +234,11 @@ export default function CreateEventPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
         <div>
-          <label className="text-sm font-medium">Event name</label>
+          <label htmlFor="name" className="text-sm font-medium">
+            Event name
+          </label>
           <Input
+            id="name"
             {...register("name")}
             className="mt-1"
             placeholder="Kosmos Demo Night"
@@ -241,8 +249,11 @@ export default function CreateEventPage() {
         </div>
 
         <div>
-          <label className="text-sm font-medium">Cover image</label>
+          <label htmlFor="coverImage" className="text-sm font-medium">
+            Cover image
+          </label>
           <input
+            id="coverImage"
             type="file"
             accept="image/*"
             onChange={(e) => setCoverImage(e.target.files?.[0] ?? null)}
@@ -250,10 +261,13 @@ export default function CreateEventPage() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="text-sm font-medium">Start</label>
+            <label htmlFor="startsAt" className="text-sm font-medium">
+              Start
+            </label>
             <Input
+              id="startsAt"
               type="datetime-local"
               {...register("startsAt")}
               className="mt-1"
@@ -266,8 +280,11 @@ export default function CreateEventPage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium">End</label>
+            <label htmlFor="endsAt" className="text-sm font-medium">
+              End
+            </label>
             <Input
+              id="endsAt"
               type="datetime-local"
               {...register("endsAt")}
               className="mt-1"
@@ -281,8 +298,11 @@ export default function CreateEventPage() {
         </div>
 
         <div>
-          <label className="text-sm font-medium">Location</label>
+          <label htmlFor="location" className="text-sm font-medium">
+            Location
+          </label>
           <Input
+            id="location"
             {...register("location")}
             className="mt-1"
             placeholder="Offline location or virtual link"
@@ -290,8 +310,11 @@ export default function CreateEventPage() {
         </div>
 
         <div>
-          <label className="text-sm font-medium">Description</label>
+          <label htmlFor="description" className="text-sm font-medium">
+            Description
+          </label>
           <textarea
+            id="description"
             {...register("description")}
             rows={4}
             className="mt-1 w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
@@ -299,10 +322,13 @@ export default function CreateEventPage() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <label className="text-sm font-medium">Price (ETH)</label>
+            <label htmlFor="price" className="text-sm font-medium">
+              Price (ETH)
+            </label>
             <Input
+              id="price"
               type="number"
               step="0.0001"
               min="0"
@@ -312,10 +338,11 @@ export default function CreateEventPage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium">
+            <label htmlFor="capacity" className="text-sm font-medium">
               Capacity (blank = unlimited)
             </label>
             <Input
+              id="capacity"
               type="number"
               min="1"
               {...register("capacity")}
@@ -327,6 +354,7 @@ export default function CreateEventPage() {
         <div>
           <label className="flex items-center gap-2 text-sm">
             <input
+              id="requiresApproval"
               type="checkbox"
               {...register("requiresApproval")}
               disabled={isPaidEvent}
@@ -345,13 +373,19 @@ export default function CreateEventPage() {
           )}
         </div>
 
-        {error && <p className="text-sm text-danger">{error}</p>}
+        {error && <ErrorBanner message={error} />}
 
         <Button type="submit" disabled={step !== "idle"} className="w-full">
-          {step === "idle" && "Create Event"}
-          {step === "saving" && "Saving details..."}
-          {step === "deploying" && "Confirm in your wallet..."}
-          {step === "finalizing" && "Finishing up..."}
+          <span
+            className="flex items-center justify-center gap-2"
+            aria-live="polite"
+          >
+            {step !== "idle" && <Spinner />}
+            {step === "idle" && "Create Event"}
+            {step === "saving" && "Saving details..."}
+            {step === "deploying" && "Confirm in your wallet..."}
+            {step === "finalizing" && "Finishing up..."}
+          </span>
         </Button>
       </form>
     </main>
