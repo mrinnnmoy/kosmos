@@ -79,6 +79,7 @@ export async function GET(request: Request, { params }: RouteContext) {
       name: event.name,
       price: event.price,
       escrowContractAddress: event.escrowContractAddress,
+      status: event.status,
     },
     requests,
   });

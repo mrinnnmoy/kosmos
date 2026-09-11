@@ -130,7 +130,7 @@ export async function POST(request: Request) {
     )
     .limit(1);
 
-  if (existing) {
+  if (existing && existing.status !== "cancelled") {
     return NextResponse.json(
       { message: "This person has already requested to join this event" },
       { status: 409 }

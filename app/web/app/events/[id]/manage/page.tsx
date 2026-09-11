@@ -44,6 +44,7 @@ type QueueResponse = {
     name: string;
     price: string;
     escrowContractAddress: string | null;
+    status: "draft" | "upcoming" | "live" | "ended" | "cancelled";
   };
   requests: PendingRequest[];
 };
@@ -110,6 +111,7 @@ export default function ManageEventPage() {
     useState<ActionState>(null);
   const [actionError, setActionError] =
     useState<string | null>(null);
+  const [startingEvent, setStartingEvent] = useState(false);
 
   const [completedTxHashes, setCompletedTxHashes] =
     useState<Record<string, Hex>>({});
@@ -212,6 +214,49 @@ export default function ManageEventPage() {
 
     void loadInitialQueue();
   }, [ready, authenticated, eventId, getAccessToken]);
+
+  async function startEvent() {
+    setStartingEvent(true);
+    setActionError(null);
+
+    try {
+      const token = await getAccessToken();
+
+      if (!token) {
+        throw new Error("Unable to get authentication token");
+      }
+
+      const response = await fetch(
+        `/api/events/${eventId}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({ status: "live" }),
+        }
+      );
+
+      const body = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          body?.message ?? "Failed to start event"
+        );
+      }
+
+      await fetchQueue();
+    } catch (error) {
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Failed to start event"
+      );
+    } finally {
+      setStartingEvent(false);
+    }
+  }
 
   async function syncAction(
     requestId: string,
@@ -462,6 +507,26 @@ export default function ManageEventPage() {
         <p className="mt-2 text-sm text-muted-foreground">
           Approve or deny pending join requests.
         </p>
+
+        <div className="mt-5 flex flex-wrap gap-3">
+          {queue.event.status === "upcoming" && (
+            <Button
+              type="button"
+              onClick={() => void startEvent()}
+              disabled={startingEvent}
+            >
+              {startingEvent ? "Starting..." : "Start Event"}
+            </Button>
+          )}
+
+          {queue.event.status === "live" && (
+            <a href={`/events/${eventId}/checkin`}>
+              <Button type="button">
+                Open Check-in Scanner
+              </Button>
+            </a>
+          )}
+        </div>
       </div>
 
       {actionError && (

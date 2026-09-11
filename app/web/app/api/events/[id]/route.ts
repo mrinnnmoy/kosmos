@@ -39,7 +39,26 @@ export async function PATCH(request: Request, { params }: RouteContext) {
     return NextResponse.json({ message: "Not found" }, { status: 404 });
   }
 
-  const { escrowContractAddress } = await request.json();
+  const body = await request.json();
+
+  if (body.status === "live") {
+    if (event.status !== "upcoming") {
+      return NextResponse.json(
+        { message: "Event must be upcoming to start" },
+        { status: 400 }
+      );
+    }
+
+    const [updated] = await db
+      .update(events)
+      .set({ status: "live" })
+      .where(eq(events.id, id))
+      .returning();
+
+    return NextResponse.json(updated);
+  }
+
+  const { escrowContractAddress } = body;
 
   if (!escrowContractAddress) {
     return NextResponse.json(
