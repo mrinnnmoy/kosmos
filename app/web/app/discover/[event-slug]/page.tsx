@@ -202,13 +202,10 @@ export default async function EventDetailPage({
                 escrowAddress={event.escrowContractAddress}
                 hostWalletAddress={host?.linkedWallet ?? null}
                 startsAt={event.startsAt}
+                eventName={event.name}
               />
 
-              {(event.requiresApproval || Number(event.price) > 0) && (
-                <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-                  The host reviews every request before it&apos;s confirmed.
-                </p>
-              )}
+
             </div>
           )}
 

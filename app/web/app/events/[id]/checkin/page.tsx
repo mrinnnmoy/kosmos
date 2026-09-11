@@ -1,5 +1,9 @@
 "use client";
 
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
+
+import { Spinner } from "@/components/ui/Spinner";
+
 import {
   useCallback,
   useEffect,
@@ -165,9 +169,10 @@ export default function CheckInPage() {
   if (!ready || loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background px-6">
-        <p className="text-muted-foreground">
-          Loading check-in...
-        </p>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Spinner />
+          <span>Loading check-in...</span>
+        </div>
       </main>
     );
   }
@@ -185,7 +190,7 @@ export default function CheckInPage() {
   if (error) {
     return (
       <main className="mx-auto max-w-md px-4 py-16">
-        <p className="text-danger">{error}</p>
+        <ErrorBanner message={error} />
       </main>
     );
   }

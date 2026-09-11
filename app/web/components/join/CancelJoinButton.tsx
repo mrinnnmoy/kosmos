@@ -1,5 +1,9 @@
 "use client";
 
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
+
+import { Spinner } from "@/components/ui/Spinner";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -214,15 +218,21 @@ export function CancelJoinButton({
         onClick={cancel}
         disabled={status === "cancelling"}
       >
-        {status === "cancelling"
-          ? "Cancelling..."
-          : "Cancel"}
+        <span
+          className="flex items-center justify-center gap-2"
+          aria-live="polite"
+        >
+          {status === "cancelling" && <Spinner />}
+          {status === "cancelling"
+            ? "Cancelling..."
+            : "Cancel"}
+        </span>
       </Button>
 
       {error && (
-        <p className="mt-1 text-xs text-danger">
-          {error}
-        </p>
+        <div className="mt-2">
+          <ErrorBanner message={error} />
+        </div>
       )}
     </div>
   );

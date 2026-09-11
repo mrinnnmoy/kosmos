@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { EventCard } from "@/components/events/EventCard";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { db } from "@/lib/db";
 import { events, joinRequests, users } from "@/lib/db/schema";
 
@@ -80,9 +81,9 @@ export default async function UserDashboardPage({
         </h2>
 
         {hostedEvents.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">
-            No hosted events yet.
-          </p>
+          <div className="mt-4">
+            <EmptyState title="No hosted events yet" />
+          </div>
         ) : (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {hostedEvents.map((event) => (
@@ -98,9 +99,12 @@ export default async function UserDashboardPage({
         </h2>
 
         {joinedRows.length === 0 ? (
-          <p className="mt-2 text-sm text-muted-foreground">
-            No joined events yet.
-          </p>
+          <div className="mt-4">
+            <EmptyState
+              title="No joined events yet"
+              description="Find something to join on Discover."
+            />
+          </div>
         ) : (
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             {joinedRows.map(({ event, joinStatus }) => (

@@ -1,5 +1,9 @@
 "use client";
 
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
+
+import { Spinner } from "@/components/ui/Spinner";
+
 import { useState } from "react";
 import { useConnectWallet, usePrivy } from "@privy-io/react-auth";
 import {
@@ -661,22 +665,31 @@ export function UniswapPayButton({
                 : handlePayment
             }
           >
-            {state === "approving"
-              ? "Approve USDC in wallet..."
-              : state === "building"
-                ? "Preparing payment..."
-                : state === "swapping"
-                  ? "Confirm swap in wallet..."
-                  : state === "depositing"
-                    ? "Deposit ETH in escrow..."
-                    : pendingDepositAmount
-                      ? "Retry deposit"
-                      : Boolean(
-                          quoteData.cancel ||
-                          quoteData.approval
-                        )
-                        ? "Approve USDC & pay"
-                        : "Pay with USDC"}
+            <span
+              className="flex items-center justify-center gap-2"
+              aria-live="polite"
+            >
+              {(state === "approving" ||
+                state === "building" ||
+                state === "swapping" ||
+                state === "depositing") && <Spinner />}
+              {state === "approving"
+                ? "Approve USDC in wallet..."
+                : state === "building"
+                  ? "Preparing payment..."
+                  : state === "swapping"
+                    ? "Confirm swap in wallet..."
+                    : state === "depositing"
+                      ? "Deposit ETH in escrow..."
+                      : pendingDepositAmount
+                        ? "Retry deposit"
+                        : Boolean(
+                            quoteData.cancel ||
+                            quoteData.approval
+                          )
+                          ? "Approve USDC & pay"
+                          : "Pay with USDC"}
+            </span>
           </Button>
         </div>
       )}
@@ -694,7 +707,7 @@ export function UniswapPayButton({
 
       {error && (
         <div className="mt-2">
-          <p className="text-sm text-danger">{error}</p>
+          <ErrorBanner message={error} />
 
           <Button
             type="button"

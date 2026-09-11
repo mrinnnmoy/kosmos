@@ -30,12 +30,24 @@ export async function sendQRTicketEmail(params: {
   ticketId: string;
 }) {
   const { to, ticketId, ...rest } = params;
-  const qrCodeDataUrl = await QRCode.toDataURL(ticketId);
+  const qrCodeCid = "kosmos-ticket-qr";
+  const qrCodeBuffer = await QRCode.toBuffer(ticketId, {
+    type: "png",
+    width: 400,
+    margin: 2,
+  });
 
   return sendEmail({
     to,
     subject: `You're in! Ticket for ${rest.eventName}`,
-    react: <QRTicketEmail {...rest} qrCodeDataUrl={qrCodeDataUrl} />,
+    react: <QRTicketEmail {...rest} qrCodeCid={qrCodeCid} />,
+    attachments: [
+      {
+        filename: "kosmos-ticket.png",
+        content: qrCodeBuffer,
+        contentId: qrCodeCid,
+      },
+    ],
   });
 }
 

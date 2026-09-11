@@ -6,7 +6,7 @@ interface QRTicketEmailProps {
   eventName: string;
   eventDate: string;
   eventLocation: string;
-  qrCodeDataUrl: string;
+  qrCodeCid: string;
 }
 
 export default function QRTicketEmail({
@@ -14,7 +14,7 @@ export default function QRTicketEmail({
   eventName,
   eventDate,
   eventLocation,
-  qrCodeDataUrl,
+  qrCodeCid,
 }: QRTicketEmailProps) {
   return (
     <EmailLayout>
@@ -26,7 +26,12 @@ export default function QRTicketEmail({
         {eventDate} · {eventLocation}
       </Text>
       <Section style={{ textAlign: "center", marginTop: 24 }}>
-        <Img src={qrCodeDataUrl} width={200} height={200} alt="Your ticket QR code" />
+        <Img
+          src={`cid:${qrCodeCid}`}
+          width={200}
+          height={200}
+          alt="Your ticket QR code"
+        />
       </Section>
       <Text style={{ fontSize: 14, color: "#8e8e93", marginTop: 16 }}>
         Show this QR code at the door to check in.

@@ -1,5 +1,9 @@
 "use client";
 
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
+
+import { Spinner } from "@/components/ui/Spinner";
+
 import { useEffect, useRef, useState } from "react";
 import { usePrivy, type User } from "@privy-io/react-auth";
 import { useRouter } from "next/navigation";
@@ -226,11 +230,17 @@ export default function SignInPage() {
         )}
 
         {authenticated && externalEthereumWallet && !dbUser && !error && (
-          <p className="mt-6 text-sm text-muted-foreground">
-            {syncing
-              ? "Setting up your Kosmos account..."
-              : "Preparing your account..."}
-          </p>
+          <div
+            className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground"
+            aria-live="polite"
+          >
+            <Spinner />
+            <span>
+              {syncing
+                ? "Setting up your Kosmos account..."
+                : "Preparing your account..."}
+            </span>
+          </div>
         )}
 
         {authenticated &&
@@ -243,7 +253,12 @@ export default function SignInPage() {
                 <span className="text-foreground">yourname.kosmos.eth</span>.
               </p>
 
+              <label htmlFor="kosmos-id" className="sr-only">
+                Kosmos ID
+              </label>
+
               <Input
+                id="kosmos-id"
                 className="mt-6"
                 placeholder="yourname"
                 value={label}
@@ -265,12 +280,22 @@ export default function SignInPage() {
                 disabled={!availability?.available || claiming}
                 onClick={claimId}
               >
-                {claiming ? "Claiming..." : "Claim your Kosmos ID"}
+                <span
+                  className="flex items-center justify-center gap-2"
+                  aria-live="polite"
+                >
+                  {claiming && <Spinner />}
+                  {claiming ? "Claiming..." : "Claim your Kosmos ID"}
+                </span>
               </Button>
             </>
           )}
 
-        {error && <p className="mt-5 text-sm text-danger">{error}</p>}
+        {error && (
+          <div className="mt-5 text-left">
+            <ErrorBanner message={error} />
+          </div>
+        )}
       </Card>
     </main>
   );

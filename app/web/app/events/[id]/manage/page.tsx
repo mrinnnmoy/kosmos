@@ -1,6 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { ErrorBanner } from "@/components/ui/ErrorBanner";
+
+import { EmptyState } from "@/components/ui/EmptyState";
+
+import { Spinner } from "@/components/ui/Spinner";
+
+import { useCallback, useEffect, useState, useRef} from "react";
 import { useParams } from "next/navigation";
 import {
   useConnectWallet,
@@ -113,6 +119,7 @@ export default function ManageEventPage() {
     useState<string | null>(null);
   const [startingEvent, setStartingEvent] = useState(false);
   const [endingEvent, setEndingEvent] = useState(false);
+  const endingEventLockRef = useRef(false);
   const [endTxHashes, setEndTxHashes] = useState<{
     payout?: Hex;
     mint?: Hex;
@@ -281,6 +288,11 @@ export default function ManageEventPage() {
       return;
     }
 
+    if (endingEventLockRef.current) {
+      return;
+    }
+
+    endingEventLockRef.current = true;
     setEndingEvent(true);
     setActionError(null);
 
@@ -510,6 +522,7 @@ export default function ManageEventPage() {
           : "Failed to end event"
       );
     } finally {
+      endingEventLockRef.current = false;
       setEndingEvent(false);
     }
   }
@@ -715,9 +728,10 @@ export default function ManageEventPage() {
   if (!ready || loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-background px-6">
-        <p className="text-muted-foreground">
-          Loading join requests...
-        </p>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Spinner />
+          <span>Loading join requests...</span>
+        </div>
       </main>
     );
   }
@@ -735,7 +749,7 @@ export default function ManageEventPage() {
   if (loadError) {
     return (
       <main className="mx-auto min-h-screen max-w-3xl bg-background px-6 py-12">
-        <p className="text-danger">{loadError}</p>
+        <ErrorBanner message={loadError} />
 
         <Button
           type="button"
@@ -771,7 +785,13 @@ export default function ManageEventPage() {
               onClick={() => void startEvent()}
               disabled={startingEvent}
             >
-              {startingEvent ? "Starting..." : "Start Event"}
+              <span
+                className="flex items-center justify-center gap-2"
+                aria-live="polite"
+              >
+                {startingEvent && <Spinner />}
+                {startingEvent ? "Starting..." : "Start Event"}
+              </span>
             </Button>
           )}
 
@@ -788,9 +808,13 @@ export default function ManageEventPage() {
                 onClick={() => void endEvent()}
                 disabled={endingEvent}
               >
-                {endingEvent
-                  ? "Ending event..."
-                  : "End Event"}
+                <span
+                  className="flex items-center justify-center gap-2"
+                  aria-live="polite"
+                >
+                  {endingEvent && <Spinner />}
+                  {endingEvent ? "Ending event..." : "End Event"}
+                </span>
               </Button>
             </>
           )}
@@ -804,17 +828,16 @@ export default function ManageEventPage() {
       </div>
 
       {actionError && (
-        <div className="mb-6 rounded-lg border border-danger px-4 py-3">
-          <p className="text-sm text-danger">
-            {actionError}
-          </p>
+        <div className="mb-6">
+          <ErrorBanner message={actionError} />
         </div>
       )}
 
       {queue.requests.length === 0 ? (
-        <p className="text-muted-foreground">
-          No pending join requests.
-        </p>
+        <EmptyState
+          title="No pending requests"
+          description="You're all caught up."
+        />
       ) : (
         <div className="space-y-4">
           {queue.requests.map((request) => {
@@ -867,11 +890,17 @@ export default function ManageEventPage() {
                       )
                     }
                   >
-                    {currentAction === "approve"
-                      ? "Approving..."
-                      : hasCompletedTransaction
-                        ? "Retry sync"
-                        : "Accept"}
+                    <span
+                      className="flex items-center justify-center gap-2"
+                      aria-live="polite"
+                    >
+                      {currentAction === "approve" && <Spinner />}
+                      {currentAction === "approve"
+                        ? "Approving..."
+                        : hasCompletedTransaction
+                          ? "Retry sync"
+                          : "Accept"}
+                    </span>
                   </Button>
 
                   <Button
@@ -889,9 +918,15 @@ export default function ManageEventPage() {
                       )
                     }
                   >
-                    {currentAction === "deny"
-                      ? "Refunding..."
-                      : "Deny"}
+                    <span
+                      className="flex items-center justify-center gap-2"
+                      aria-live="polite"
+                    >
+                      {currentAction === "deny" && <Spinner />}
+                      {currentAction === "deny"
+                        ? "Refunding..."
+                        : "Deny"}
+                    </span>
                   </Button>
                 </div>
               </div>
