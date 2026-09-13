@@ -5,6 +5,8 @@ import { events } from "@/lib/db/schema";
 import { EventCard } from "@/components/events/EventCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 
+export const dynamic = "force-dynamic";
+
 export default async function DiscoverPage() {
   const allEvents = await db
     .select()
