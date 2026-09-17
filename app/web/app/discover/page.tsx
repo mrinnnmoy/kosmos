@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ne } from "drizzle-orm";
+import { and, gt, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { events } from "@/lib/db/schema";
 import { EventCard } from "@/components/events/EventCard";
@@ -11,7 +11,12 @@ export default async function DiscoverPage() {
   const allEvents = await db
     .select()
     .from(events)
-    .where(ne(events.status, "draft"));
+    .where(
+      and(
+        inArray(events.status, ["upcoming", "live"]),
+        gt(events.endsAt, new Date())
+      )
+    );
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-16">
