@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
+import { compressImage } from "@/lib/images/compress-image";
 
 type LinkedAccount = User["linkedAccounts"][number];
 type WalletAccount = Extract<LinkedAccount, { type: "wallet" }>;
@@ -112,7 +113,8 @@ export default function CreateEventPage() {
       );
 
       if (coverImage) {
-        formData.append("coverImage", coverImage);
+        const optimizedCoverImage = await compressImage(coverImage);
+        formData.append("coverImage", optimizedCoverImage);
       }
 
       const createRes = await fetch("/api/events", {
