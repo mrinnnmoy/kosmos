@@ -76,72 +76,9 @@ export async function POST(request: Request) {
       paymentTxHash?: string;
     };
 
-  if (!eventId || !idkitResponse) {
+  if (!eventId) {
     return NextResponse.json(
-      { message: "eventId and idkitResponse are required" },
-      { status: 400 }
-    );
-  }
-
-  if (
-    !("action" in idkitResponse) ||
-    idkitResponse.action !== WORLD_ACTION
-  ) {
-    return NextResponse.json(
-      { message: "Invalid World ID action" },
-      { status: 400 }
-    );
-  }
-
-  try {
-    await verifyWorldIdProof(idkitResponse);
-  } catch (error) {
-    console.error("World ID join verification failed", error);
-
-    return NextResponse.json(
-      { message: "Proof verification failed" },
-      { status: 400 }
-    );
-  }
-
-  const firstResponse = idkitResponse.responses?.[0];
-
-  if (!firstResponse || !("nullifier" in firstResponse)) {
-    return NextResponse.json(
-      { message: "No nullifier in proof response" },
-      { status: 400 }
-    );
-  }
-
-  const expectedSignalHash = hashSignal(walletAddress);
-
-  if (
-    !firstResponse.signal_hash ||
-    firstResponse.signal_hash.toLowerCase() !==
-      expectedSignalHash.toLowerCase()
-  ) {
-    return NextResponse.json(
-      { message: "World ID signal does not match wallet" },
-      { status: 400 }
-    );
-  }
-
-  const rawNullifier = firstResponse.nullifier;
-
-  if (!rawNullifier) {
-    return NextResponse.json(
-      { message: "No nullifier in proof response" },
-      { status: 400 }
-    );
-  }
-
-  let canonicalNullifier: string;
-
-  try {
-    canonicalNullifier = BigInt(rawNullifier).toString(10);
-  } catch {
-    return NextResponse.json(
-      { message: "Invalid nullifier in proof response" },
+      { message: "eventId is required" },
       { status: 400 }
     );
   }
@@ -232,29 +169,102 @@ export async function POST(request: Request) {
     }
   }
 
-  const [existingNullifier] = await db
-    .select()
-    .from(joinRequests)
-    .where(
-      and(
-        eq(joinRequests.eventId, eventId),
-        eq(
-          joinRequests.selfieCheckNullifier,
-          canonicalNullifier
+  let canonicalNullifier: string | null = null;
+
+  if (event.requiresWorldVerification) {
+    if (!idkitResponse) {
+      return NextResponse.json(
+        { message: "World verification is required for this event" },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !("action" in idkitResponse) ||
+      idkitResponse.action !== WORLD_ACTION
+    ) {
+      return NextResponse.json(
+        { message: "Invalid World ID action" },
+        { status: 400 }
+      );
+    }
+
+    try {
+      await verifyWorldIdProof(idkitResponse);
+    } catch (error) {
+      console.error("World ID join verification failed", error);
+
+      return NextResponse.json(
+        { message: "Proof verification failed" },
+        { status: 400 }
+      );
+    }
+
+    const firstResponse = idkitResponse.responses?.[0];
+
+    if (!firstResponse || !("nullifier" in firstResponse)) {
+      return NextResponse.json(
+        { message: "No nullifier in proof response" },
+        { status: 400 }
+      );
+    }
+
+    const expectedSignalHash = hashSignal(walletAddress);
+
+    if (
+      !firstResponse.signal_hash ||
+      firstResponse.signal_hash.toLowerCase() !==
+        expectedSignalHash.toLowerCase()
+    ) {
+      return NextResponse.json(
+        { message: "World ID signal does not match wallet" },
+        { status: 400 }
+      );
+    }
+
+    const rawNullifier = firstResponse.nullifier;
+
+    if (!rawNullifier) {
+      return NextResponse.json(
+        { message: "No nullifier in proof response" },
+        { status: 400 }
+      );
+    }
+
+    try {
+      canonicalNullifier = BigInt(rawNullifier).toString(10);
+    } catch {
+      return NextResponse.json(
+        { message: "Invalid nullifier in proof response" },
+        { status: 400 }
+      );
+    }
+
+    const [existingNullifier] = await db
+      .select()
+      .from(joinRequests)
+      .where(
+        and(
+          eq(joinRequests.eventId, eventId),
+          eq(
+            joinRequests.selfieCheckNullifier,
+            canonicalNullifier
+          )
         )
       )
-    )
-    .limit(1);
+      .limit(1);
 
-  if (
-    existingNullifier &&
-    existingNullifier.id !== existingForUser?.id
-  ) {
-    return NextResponse.json(
-      { message: "This person has already requested to join this event" },
-      { status: 409 }
-    );
+    if (
+      existingNullifier &&
+      existingNullifier.id !== existingForUser?.id
+    ) {
+      return NextResponse.json(
+        { message: "This person has already requested to join this event" },
+        { status: 409 }
+      );
+    }
   }
+
   let verifiedPaymentTxHash: string | null = null;
 
   if (isPaid) {

@@ -72,6 +72,7 @@ export default function CreateEventPage() {
     resolver: zodResolver(createEventFormSchema),
     defaultValues: {
       requiresApproval: false,
+      requiresWorldVerification: true,
     },
   });
 
@@ -110,6 +111,10 @@ export default function CreateEventPage() {
       formData.append(
         "requiresApproval",
         String(Number(values.price) > 0 ? true : values.requiresApproval)
+      );
+      formData.append(
+        "requiresWorldVerification",
+        String(values.requiresWorldVerification)
       );
 
       if (coverImage) {
@@ -373,6 +378,23 @@ export default function CreateEventPage() {
               request before the ticket is approved.
             </p>
           )}
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              id="requiresWorldVerification"
+              type="checkbox"
+              {...register("requiresWorldVerification")}
+              className="h-4 w-4 rounded border-border"
+            />
+            Require World verification to join
+          </label>
+
+          <p className="mt-1 text-xs text-muted-foreground">
+            Attendees must complete World verification before joining this
+            event.
+          </p>
         </div>
 
         {error && <ErrorBanner message={error} />}

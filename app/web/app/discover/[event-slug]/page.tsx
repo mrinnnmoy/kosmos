@@ -4,7 +4,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { events, joinRequests, users } from "@/lib/db/schema";
 import { Badge } from "@/components/ui/Badge";
-import { EventJoinWorldId } from "@/components/worldid/EventJoinWorldId";
+import { EventJoin } from "@/components/worldid/EventJoin";
 import { ipfsUrl } from "@/lib/ipfs/upload";
 
 export default async function EventDetailPage({
@@ -196,13 +196,14 @@ export default async function EventDetailPage({
             </div>
           ) : (
             <div className="mt-8 rounded-xl border border-border bg-surface p-5">
-              <EventJoinWorldId
+              <EventJoin
                 eventId={event.id}
                 price={event.price}
                 escrowAddress={event.escrowContractAddress}
                 hostWalletAddress={host?.linkedWallet ?? null}
                 startsAt={event.startsAt}
                 eventName={event.name}
+                requiresWorldVerification={event.requiresWorldVerification}
               />
 
 

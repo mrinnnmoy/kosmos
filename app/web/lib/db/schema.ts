@@ -59,6 +59,9 @@ export const events = pgTable("events", {
   price: numeric("price", { precision: 18, scale: 8 }).notNull().default("0"),
   capacity: integer("capacity"), // null = unlimited
   requiresApproval: boolean("requires_approval").notNull().default(false),
+  requiresWorldVerification: boolean("requires_world_verification")
+    .notNull()
+    .default(true),
   escrowContractAddress: text("escrow_contract_address"),
   status: eventStatusEnum("status").notNull().default("draft"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
