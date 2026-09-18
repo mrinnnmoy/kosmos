@@ -44,13 +44,14 @@ function isExternalEthereumWallet(
   );
 }
 
-export function EventJoinWorldId({
+export function EventJoin({
   eventId,
   price,
   escrowAddress,
   hostWalletAddress,
   startsAt,
   eventName,
+  requiresWorldVerification,
 }: {
   eventId: string;
   price: string;
@@ -58,6 +59,7 @@ export function EventJoinWorldId({
   hostWalletAddress: string | null;
   startsAt: string | Date;
   eventName: string;
+  requiresWorldVerification: boolean;
 }) {
   const {
     ready,
@@ -196,7 +198,7 @@ export function EventJoinWorldId({
   async function submitJoin(
     depositTxHash: string | null
   ): Promise<void> {
-    if (!worldIdResult) {
+    if (requiresWorldVerification && !worldIdResult) {
       setError("World ID verification result is missing");
       setJoinState("error");
       return;
@@ -220,7 +222,7 @@ export function EventJoinWorldId({
         },
         body: JSON.stringify({
           eventId,
-          idkitResponse: worldIdResult,
+          idkitResponse: requiresWorldVerification ? worldIdResult : undefined,
           paymentTxHash: depositTxHash,
         }),
       });
@@ -477,7 +479,7 @@ export function EventJoinWorldId({
     );
   }
 
-  if (!verified) {
+  if (requiresWorldVerification && !verified) {
     return (
       <SelfieCheckButton
         eventId={eventId}

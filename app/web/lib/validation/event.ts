@@ -10,6 +10,7 @@ export const createEventFormSchema = z
     price: z.coerce.number().min(0),
     capacity: z.coerce.number().int().positive().optional(),
     requiresApproval: z.boolean(),
+    requiresWorldVerification: z.boolean(),
   })
   .refine((data) => new Date(data.startsAt) < new Date(data.endsAt), {
     message: "Start must be before end",
@@ -37,6 +38,9 @@ export const createEventApiSchema = z
       .optional()
       .or(z.literal("").transform(() => undefined)),
     requiresApproval: z.enum(["true", "false"]).transform((v) => v === "true"),
+    requiresWorldVerification: z
+      .enum(["true", "false"])
+      .transform((v) => v === "true"),
   })
   .refine((data) => new Date(data.startsAt) < new Date(data.endsAt), {
     message: "Start must be before end",

@@ -1,0 +1,1 @@
+ALTER TABLE "events" ADD COLUMN "requires_world_verification" boolean DEFAULT true NOT NULL;

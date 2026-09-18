@@ -69,6 +69,7 @@ export async function POST(request: Request) {
       capacity: data.capacity ?? null,
       requiresApproval:
         Number(data.price) > 0 ? true : data.requiresApproval,
+      requiresWorldVerification: data.requiresWorldVerification,
       status: "draft",
     })
     .returning();
